@@ -516,21 +516,30 @@ textarea {
     cursor: pointer;
 }
 
+.recipe-card.selected {
+    border: 2px solid blue;
+    background-color: #f0f8ff;
+}
+
 /* Meal Plan */
 #meal-plan {
-    margin: 20px 0;
+    margin: 20px auto;
     padding: 20px;
     background-color: #f9f9f9;
     border-radius: 8px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    max-width: 100%; /* Constrain width to prevent overflow */
+    overflow-x: auto; /* Allow horizontal scrolling if content overflows */
 }
 
 #meal-plan-grid {
     display: grid;
-    grid-template-columns: repeat(7, 1fr);
+    grid-template-columns: repeat(7, 1fr); /* Default for larger screens */
     gap: 10px;
     margin-top: 20px;
+    max-width: 100%; /* Ensure grid stays within container */
 }
+
 
 .day-column {
     background-color: #ecf0f1;
@@ -760,7 +769,7 @@ textarea {
 /* Responsive Styles */
 @media (max-width: 768px) {
     #meal-plan-grid {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(2, 1fr); /* Two columns for smaller screens */
         gap: 15px;
     }
 
@@ -768,3 +777,34 @@ textarea {
         font-size: 1rem;
     }
 }
+
+/* Mobile-specific styles */
+@media (max-width: 768px) {
+    .meal-planner {
+        grid-template-columns: 1fr; /* Single column on smaller screens */
+        gap: 5px;
+    }
+
+    .day-column {
+        padding: 10px;
+        font-size: 14px;
+    }
+
+    .recipe-card {
+        font-size: 14px; /* Smaller text for recipe cards */
+        padding: 10px; /* Adjust padding */
+    }
+
+    .meal-slot {
+        min-height: 100px; /* Adjust height for better fit */
+        font-size: 14px; /* Slightly smaller font */
+        padding: 8px;
+    }
+    /* Buttons and other elements */
+button {
+    width: 100%; /* Buttons take up the full width on mobile */
+    padding: 10px;
+}
+
+}
+

@@ -1188,6 +1188,34 @@ document.getElementById('clear-weekly-list').addEventListener('click', function 
     }
 });
 
+const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
+if (isTouchDevice) {
+    // Enable click-to-select functionality
+    document.querySelectorAll('.recipe-card').forEach(card => {
+        card.addEventListener('click', () => {
+            // Highlight selected recipe
+            document.querySelectorAll('.recipe-card').forEach(c => c.classList.remove('selected'));
+            card.classList.add('selected');
+        });
+    });
+
+    // Drop functionality
+    document.querySelectorAll('.meal-slot').forEach(slot => {
+        slot.addEventListener('click', () => {
+            const selectedRecipe = document.querySelector('.recipe-card.selected');
+            if (selectedRecipe) {
+                slot.innerHTML = `
+                    <div>
+                        ${selectedRecipe.querySelector('h4').textContent}
+                        <button onclick="removeFromMealPlan('${slot.dataset.day}', '${slot.dataset.meal}')">Remove</button>
+                    </div>
+                `;
+            }
+        });
+    });
+}
+
 document.addEventListener("DOMContentLoaded", () => {
     console.log("DOMContentLoaded event fired"); // Debugging log
     initializeMealPlanner(); // Call your function here
