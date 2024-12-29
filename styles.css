@@ -1,0 +1,454 @@
+/* General Styles */
+body {
+    font-family: Arial, sans-serif;
+    line-height: 1.6;
+    margin: 0;
+    padding: 0;
+    background-color: #f7f9fc;
+    color: #333;
+}
+
+/* Header */
+header {
+    background-color: #4CAF50;
+    color: white;
+    padding: 1rem 0;
+    text-align: center;
+}
+
+/* Main Container */
+main {
+    max-width: 1200px;
+    margin: 20px auto;
+    padding: 10px;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Buttons */
+button {
+    cursor: pointer;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
+    margin: 5px 0;
+    transition: background-color 0.3s ease, transform 0.3s ease;
+}
+
+button:hover {
+    background-color: #45a049;
+    transform: scale(1.05);
+}
+
+button#toggle-add-recipe,
+.recipe-card button.add {
+    background-color: #4CAF50;
+    color: white;
+}
+
+button#randomize-button,
+button#clear-recipes-button,
+button#clear-weekly-list {
+    background-color: #e74c3c;
+    color: white;
+}
+
+button#randomize-button:hover,
+button#clear-recipes-button:hover,
+button#clear-weekly-list:hover {
+    background-color: #c0392b;
+}
+
+.recipe-card button.edit {
+    background-color: #008CBA;
+    color: white;
+}
+
+.recipe-card button.delete {
+    background-color: red;
+    color: white;
+}
+
+.recipe-card button.copy {
+    background-color: orange;
+    color: white;
+}
+
+/* Forms */
+form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+input[type="text"],
+textarea,
+select {
+    padding: 8px;
+    font-size: 1rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    width: 100%;
+}
+
+textarea {
+    resize: vertical;
+}
+
+/* Recipe List */
+#recipe-list {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 20px;
+    padding: 20px;
+    margin: 0 auto;
+}
+
+
+
+.recipe-category-group {
+    width: 100%;
+    height: 400px; /* Set a fixed height */
+    overflow-y: auto; /* Add scrolling for overflow */
+    margin-bottom: 20px;
+    border-radius: 8px;
+    padding: 10px;
+    background-color: #f1f1f1;
+    display: flex;
+    flex-direction: column;
+}
+
+.recipe-category-group:hover {
+    background-color: #e6f7ff;
+}
+
+.recipe-category-group h3 {
+    text-align: center;
+    margin-bottom: 10px;
+    font-size: 1.5rem;
+    color: #333;
+    background-color: #f5f5f5;
+    padding: 10px;
+    border-radius: 8px;
+}
+
+/***** Accordion Styles *****/
+.accordion {
+    width: 100%;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.accordion-button {
+    width: 100%;
+    padding: 15px;
+    text-align: left;
+    font-size: 1.2rem;
+    background-color: #f5f5f5;
+    border: none;
+    border-bottom: 1px solid #ddd;
+    cursor: pointer;
+    transition: background-color 0.3s ease, color 0.3s ease;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-sizing: border-box; /* Ensure padding doesn't change button size */
+}
+
+.accordion-button:hover {
+    background-color: #e0e0e0;
+    color: inherit; /* Prevent color distortion */
+    text-decoration: none; /* Avoid any underlining */
+    transform: none; /* Prevent accidental scaling */
+}
+
+.accordion-button.active {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.accordion-content {
+    display: none;
+    padding: 10px;
+    background-color: #fff;
+    border-top: 1px solid #ddd;
+}
+
+.accordion-button span {
+    font-size: 1rem;
+    font-weight: normal; /* Ensure consistent text style */
+}
+
+.accordion-content.active {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    justify-content: flex-start;
+    padding: 15px;
+}
+
+.accordion-button.indian {
+    background-color: #FFD700; /* Gold for Indian */
+    color: #333;
+}
+
+.accordion-button.indian:hover {
+    background-color: #FFC300; /* Slightly darker gold */
+}
+
+.accordion-button.italian {
+    background-color: #FF6347; /* Tomato for Italian */
+    color: #fff;
+}
+
+.accordion-button.italian:hover {
+    background-color: #FF4500; /* Darker tomato */
+}
+
+.accordion-button.british {
+    background-color: #87CEFA; /* Light Sky Blue for British */
+    color: #333;
+}
+
+.accordion-button.british:hover {
+    background-color: #4682B4; /* Steel Blue */
+}
+
+.accordion-button.american {
+    background-color: #98FB98; /* Pale Green for American */
+    color: #333;
+}
+
+.accordion-button.american:hover {
+    background-color: #32CD32; /* Lime Green */
+}
+
+.accordion-button.mexican {
+    background-color: #FF4500; /* Orange Red for Mexican */
+    color: #fff;
+}
+
+.accordion-button.mexican:hover {
+    background-color: #FF6347; /* Tomato */
+}
+
+.accordion-button.freezer-food {
+    background-color: #B0E0E6; /* Powder Blue for Freezer Food */
+    color: #333;
+}
+
+.accordion-button.freezer-food:hover {
+    background-color: #5F9EA0; /* Cadet Blue */
+}
+
+/***** Recipe Card Styling *****/
+.recipe-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    width: 160px;
+    border: 1px solid #ddd;
+    padding: 8px;
+    border-radius: 8px;
+    background-color: #fff;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
+    cursor: grab;
+}
+
+.recipe-card:hover {
+    transform: scale(1.05);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+    background-color: #f9f9f9;
+}
+/* Card Image */
+.recipe-card img {
+    width: 100%;
+    height: 96px;
+    object-fit: cover;
+    border-radius: 8px;
+}
+
+/* Card Title */
+.recipe-card h4 {
+    margin: 8px 0 4px;
+    font-size: 0.9rem;
+    text-align: center;
+    color: #333;
+    transition: color 0.3s ease;
+}
+
+.recipe-card:hover h4 {
+    color: #4CAF50;
+}
+
+/* Card Description */
+.recipe-card p {
+    margin: 4px 0;
+    text-align: center;
+    font-size: 0.75rem;
+    color: #666;
+    transition: color 0.3s ease;
+}
+
+.recipe-card:hover p {
+    color: #333;
+}
+
+/* Button Group in Card */
+.recipe-card .button-group {
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+    margin-top: 8px;
+}
+
+/* Buttons */
+.recipe-card button {
+    padding: 4px;
+    font-size: 0.7rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: transform 0.3s ease, background-color 0.3s ease;
+}
+
+.recipe-card:hover button {
+    transform: scale(1.1); /* Slightly enlarge buttons on hover */
+}
+
+/* Fix for Hover Priority */
+.recipe-card:hover .button-group button {
+    z-index: auto; /* Reset z-index to avoid overlap issues */
+}
+
+/* Weekly List */
+#weekly-list > div {
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 10px;
+    width: 30%;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+#weekly-list img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 4px;
+}
+
+/* Modal */
+#edit-recipe-modal {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 20px;
+    position: fixed;
+    top: 20%;
+    left: 50%;
+    transform: translate(-50%, -20%);
+    z-index: 1000;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+}
+
+#edit-recipe-modal form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+#upload-csv-section {
+    margin: 20px 0;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+#csv-upload {
+    margin-bottom: 10px;
+}
+
+#upload-csv-button {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+#upload-csv-button:hover {
+    background-color: #45a049;
+}
+
+#toggle-upload-csv {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+#toggle-upload-csv:hover {
+    background-color: #45a049;
+}
+
+#upload-csv-section {
+    margin: 20px 0;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+
+/* Shopping List */
+#shopping-list {
+    margin-top: 20px;
+    background-color: #f7f7f7;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 10px;
+}
+
+#shopping-list h3 {
+    margin-top: 0;
+}
+
+.stars {
+    text-align: center;
+    font-size: 1.2rem;
+    margin: 8px 0;
+    color: #FFD700; /* Gold for filled stars */
+}
+
+.stars .empty {
+    color: #ccc; /* Grey for empty stars */
+}
+
+@media (max-width: 768px) {
+    #recipe-list {
+        justify-content: center;
+    }
+
+    .recipe-card {
+        width: 100%;
+    }
+}
