@@ -1,7 +1,187 @@
-// Array to store recipes
+// Global Variables
+let savedWeeks = JSON.parse(localStorage.getItem('savedWeeks')) || [];
 let recipes = JSON.parse(localStorage.getItem('recipes')) || [];
-let weeklyRecipes = JSON.parse(localStorage.getItem('weeklyRecipes')) || []; // Load weekly recipes from localStorage
-let recipeToEdit = null; // Store the recipe being edited
+let weeklyRecipes = JSON.parse(localStorage.getItem('weeklyRecipes')) || [];
+let recipeToEdit = null; 
+let mealPlan = JSON.parse(localStorage.getItem('mealPlan')) || {
+    monday: { breakfast: null, lunch: null, dinner: null },
+    tuesday: { breakfast: null, lunch: null, dinner: null },
+    wednesday: { breakfast: null, lunch: null, dinner: null },
+    thursday: { breakfast: null, lunch: null, dinner: null },
+    friday: { breakfast: null, lunch: null, dinner: null },
+    saturday: { breakfast: null, lunch: null, dinner: null },
+    sunday: { breakfast: null, lunch: null, dinner: null },
+};
+
+function openModal(modalId) {
+    document.getElementById(modalId).style.display = "block";
+}
+
+function closeModal(modalId) {
+    document.getElementById(modalId).style.display = "none";
+}
+
+// Function to display search results
+function displaySearchResults(matchingRecipes, isTextSearch) {
+    const searchResults = document.getElementById('search-results');
+    const resultsContainer = document.getElementById('search-results-container');
+
+    if (matchingRecipes.length === 0) {
+        searchResults.style.display = 'none'; // Hide results if none match
+        return;
+    }
+
+    searchResults.style.display = 'block';
+    resultsContainer.innerHTML = ''; // Clear previous results
+
+    // Create recipe cards for each matching recipe
+    matchingRecipes.forEach(recipe => {
+        const recipeCard = document.createElement('div');
+        recipeCard.className = 'recipe-card';
+        recipeCard.setAttribute('draggable', 'true');
+        recipeCard.setAttribute('data-recipe-index', recipes.indexOf(recipe));
+        recipeCard.addEventListener('dragstart', handleDragStart);
+
+        recipeCard.innerHTML = `
+            <h4>${recipe.name}</h4>
+            <p>${recipe.time}, ${recipe.glutenOption}</p>
+            <p>${recipe.mainCategory}, ${recipe.subCategory}</p>
+            <p class="stars">${'⭐'.repeat(recipe.rating)}</p>
+        `;
+
+        resultsContainer.appendChild(recipeCard);
+    });
+
+    console.log(
+        isTextSearch
+            ? "Results from text search:"
+            : "Results from filters:",
+        matchingRecipes
+    );
+}
+
+// Function to handle search
+function handleSearch(event) {
+    const searchTerm = event.target.value.toLowerCase().trim(); // Get the input value
+    if (!searchTerm) {
+        clearSearchResults(); // If input is empty, clear results
+        return;
+    }
+
+    // Filter recipes based on the search term
+    const matchingRecipes = recipes.filter(recipe =>
+        recipe.name.toLowerCase().includes(searchTerm) || // Match by recipe name
+        recipe.mainCategory.toLowerCase().includes(searchTerm) || // Match by main category
+        recipe.subCategory.toLowerCase().includes(searchTerm) // Match by subcategory
+    );
+
+    // Display the filtered results
+    displaySearchResults(matchingRecipes, true); // 'true' indicates text-based search
+}
+
+// Add event listener to the search bar
+document.getElementById('recipe-search').addEventListener('input', handleSearch);
+
+// Function to clear search results
+function clearSearchResults() {
+    const searchResults = document.getElementById('search-results');
+    const resultsContainer = document.getElementById('search-results-container');
+
+    searchResults.style.display = 'none';
+    resultsContainer.innerHTML = ''; // Clear the results
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    const filterButton = document.getElementById("apply-filters");
+    const resetButton = document.createElement("button");
+    resetButton.textContent = "Reset Filters";
+    resetButton.style.margin = "1rem 0";
+    resetButton.id = "reset-filters";
+    filterButton.parentElement.insertBefore(resetButton, filterButton.nextSibling);
+
+    const selectedFiltersContainer = document.createElement("div");
+    selectedFiltersContainer.id = "selected-filters-container";
+    selectedFiltersContainer.style.margin = "1rem 0";
+    filterButton.parentElement.insertBefore(selectedFiltersContainer, filterButton);
+
+    function updateSelectedFiltersDisplay() {
+        const selectedTime = Array.from(document.querySelectorAll('#time-filter input:checked')).map(opt => opt.value);
+        const selectedGluten = Array.from(document.querySelectorAll('#gluten-filter input:checked')).map(opt => opt.value);
+        const selectedCategory = Array.from(document.querySelectorAll('#main-category-filter input:checked')).map(opt => opt.value);
+        const selectedSubcategory = Array.from(document.querySelectorAll('#subcategory-filter input:checked')).map(opt => opt.value);
+        const selectedRating = document.querySelector('#rating-filter input:checked')?.value || null;
+
+        const allSelectedFilters = [
+            ...selectedTime.map(value => `Time: ${value}`),
+            ...selectedGluten.map(value => `Gluten: ${value}`),
+            ...selectedCategory.map(value => `Category: ${value}`),
+            ...selectedSubcategory.map(value => `Subcategory: ${value}`),
+            selectedRating ? `Rating: ${selectedRating} Star${selectedRating > 1 ? "s" : ""}` : null,
+        ].filter(Boolean);
+
+        selectedFiltersContainer.innerHTML = allSelectedFilters.length > 0
+            ? `<strong>Selected Filters:</strong> ${allSelectedFilters.join(", ")}`
+            : "No filters selected.";
+    }
+
+    function filterRecipes() {
+        const selectedTime = Array.from(document.querySelectorAll('#time-filter input:checked')).map(opt => opt.value);
+        const selectedGluten = Array.from(document.querySelectorAll('#gluten-filter input:checked')).map(opt => opt.value);
+        const selectedCategory = Array.from(document.querySelectorAll('#main-category-filter input:checked')).map(opt => opt.value);
+        const selectedSubcategory = Array.from(document.querySelectorAll('#subcategory-filter input:checked')).map(opt => opt.value);
+        const selectedRating = parseInt(document.querySelector('#rating-filter input:checked')?.value || '0', 10);
+
+        const matchingRecipes = recipes.filter(recipe => {
+            const matchesTime = selectedTime.length === 0 || selectedTime.some(time => recipe.time.includes(time));
+            const matchesGluten = selectedGluten.length === 0 || selectedGluten.includes(recipe.glutenOption);
+            const matchesCategory = selectedCategory.length === 0 || selectedCategory.includes(recipe.mainCategory);
+            const matchesSubcategory = selectedSubcategory.length === 0 || selectedSubcategory.includes(recipe.subCategory);
+            const matchesRating = recipe.rating >= selectedRating;
+
+            return matchesTime && matchesGluten && matchesCategory && matchesSubcategory && matchesRating;
+        });
+
+        displaySearchResults(matchingRecipes, false); // 'false' indicates filter-based search
+    }
+
+    // Attach the filter button functionality
+    filterButton.addEventListener("click", filterRecipes);
+
+    // Handle reset filters button
+    resetButton.addEventListener("click", () => {
+        // Clear all filter selections
+        document.querySelectorAll('.filter-dropdown input:checked').forEach(input => (input.checked = false));
+        updateSelectedFiltersDisplay();
+        clearSearchResults(); // Clear recipe cards from view
+    });
+
+    // Dropdown functionality
+    document.querySelectorAll(".filter-dropdown").forEach(dropdown => {
+        const button = dropdown.previousElementSibling;
+        button.addEventListener("click", (event) => {
+            event.stopPropagation(); // Prevent document click listener from firing
+            const isVisible = dropdown.style.display === "block";
+            document.querySelectorAll(".filter-dropdown").forEach(dd => (dd.style.display = "none")); // Close other dropdowns
+            dropdown.style.display = isVisible ? "none" : "block"; // Toggle this dropdown
+        });
+    });
+
+    // Close dropdowns when clicking outside
+    document.addEventListener("click", () => {
+        document.querySelectorAll(".filter-dropdown").forEach(dd => (dd.style.display = "none"));
+    });
+
+    // Update filters on selection
+    document.querySelectorAll(".filter-dropdown input").forEach(input => {
+        input.addEventListener("change", () => {
+            updateSelectedFiltersDisplay();
+        });
+    });
+
+    // Initialize the selected filters display
+    updateSelectedFiltersDisplay();
+});
+
 
 // Save recipes to localStorage
 function saveRecipes() {
@@ -57,37 +237,58 @@ document.getElementById('parse-ingredients-button').addEventListener('click', fu
     const bulkInput = document.getElementById('bulk-ingredients').value.trim();
     const lines = bulkInput.split('\n');
     const ingredients = [];
-    let currentIngredient = null;
 
     lines.forEach(line => {
         const trimmedLine = line.trim();
 
         if (trimmedLine === '') return;
 
-        // Updated regex to handle cases like "1/2 onion" or "1 onion"
-        const match = trimmedLine.match(/^(\d+(?:\/\d+)?(?:\s\d+\/\d+)?)?\s*(tsp|tbsp|g|kg|ml|l|pieces|sticks|cloves|sprigs|cans|cups|teaspoons|tablespoons|stick|whole|half|quarter)?\s*(.+)?$/i);
+        // Updated regex to handle cases like "1 1/2 onion", "400ml can tomatoes", "2 tbsp sugar"
+        const match = trimmedLine.match(/^(\d+(?:\.\d+)?(?:\s\d+\/\d+)?|\d+\/\d+)?\s*([\w\-]+)?\s+(.*)$/i);
 
         if (match) {
-            const [, quantity, unit, name] = match;
+            let [_, rawQuantity, unit, name] = match;
+            let quantity = rawQuantity ? rawQuantity.toString() : null;
 
-            // Handle cases where no unit is specified
-            let correctedUnit = unit || "whole";
-            let correctedName = name || "";
-
-            if (["whole", "half", "quarter"].includes(correctedUnit.toLowerCase())) {
-                correctedName = name || correctedUnit;
-                correctedUnit = ""; // Remove the unit for items like "1 onion"
+            // Handle mixed fractions (e.g., "1 1/2")
+            if (quantity && quantity.includes(" ")) {
+                const parts = quantity.split(" ");
+                const wholeNumber = parseFloat(parts[0]);
+                const fractionParts = parts[1].split("/");
+                quantity = wholeNumber + (parseFloat(fractionParts[0]) / parseFloat(fractionParts[1]));
             }
 
-            const parsedQuantity = quantity ? parseFraction(quantity) : 1;
+            // Handle fractions only (e.g., "1/2")
+            else if (quantity && quantity.includes("/")) {
+                const fractionParts = quantity.split("/");
+                quantity = parseFloat(fractionParts[0]) / parseFloat(fractionParts[1]);
+            }
 
-            currentIngredient = {
-                quantity: parsedQuantity,
-                unit: correctedUnit,
-                name: correctedName.trim(),
+            // Convert quantity to a number for final storage
+            quantity = quantity ? parseFloat(quantity) : 1;
+
+            // Standardize units
+            const standardUnitMap = {
+                tbsp: "tablespoon",
+                tsps: "teaspoon",
+                tsp: "teaspoon",
+                cups: "cup",
+                oz: "ounce",
+                g: "gram",
+                kg: "kilogram",
+                ml: "milliliter",
+                l: "liter",
+                null: null, // Handle missing unit
             };
 
-            ingredients.push(currentIngredient);
+            unit = unit ? standardUnitMap[unit.toLowerCase()] || unit : null;
+
+            // Push parsed ingredient
+            ingredients.push({
+                quantity: quantity,
+                unit: unit,
+                name: name.trim(),
+            });
         } else {
             console.warn(`Could not parse line: ${trimmedLine}`);
         }
@@ -129,6 +330,216 @@ document.getElementById('recipe-image').addEventListener('change', function (eve
     }
 });
 
+function initializeMealPlanner() {
+    console.log("Initializing meal planner..."); // Debugging
+    const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    const meals = ['breakfast', 'lunch', 'dinner'];
+
+    days.forEach(day => {
+        meals.forEach(meal => {
+            const slot = document.querySelector(`.meal-slot[data-day="${day}"][data-meal="${meal}"]`);
+            if (slot) {
+                console.log(`Adding event listeners to slot: ${day} - ${meal}`); // Debugging
+                slot.addEventListener('dragover', handleDragOver);
+                slot.addEventListener('drop', event => handleDrop(event, day, meal));
+            } else {
+                console.warn(`Missing slot for ${day} ${meal}`);
+            }
+        });
+    });
+}
+
+
+// Function to handle dropping recipes into meal planner slots
+function handleDrop(event, day, meal) {
+    console.log(`Dropped on: ${day} - ${meal}`); // Debugging
+    event.preventDefault();
+    try {
+        const data = event.dataTransfer.getData("application/json");
+        console.log("Dropped data:", data); // Debugging
+        if (!data) {
+            console.error("No data received in drop event");
+            return;
+        }
+
+        const { recipeIndex } = JSON.parse(data);
+        if (recipeIndex === undefined) {
+            console.error("Invalid data dropped:", data);
+            return;
+        }
+
+        const recipe = recipes[recipeIndex];
+        if (!recipe) {
+            console.error("Recipe not found for index:", recipeIndex);
+            return;
+        }
+
+        // Find the current slot that holds this recipe (if any)
+        const existingSlot = document.querySelector(`.meal-item[data-recipe-index="${recipeIndex}"]`);
+        if (existingSlot) {
+            existingSlot.parentElement.innerHTML = existingSlot.parentElement.dataset.meal.charAt(0).toUpperCase() +
+                existingSlot.parentElement.dataset.meal.slice(1);
+        }
+
+        // Add the recipe to the new slot
+        const slot = document.querySelector(`.meal-slot[data-day="${day}"][data-meal="${meal}"]`);
+        slot.innerHTML = `
+            <div class="meal-item" draggable="true" data-recipe-index="${recipeIndex}" ondragstart="handleDragStart(event)">
+                <h4 class="recipe-title" onclick="showRecipeDetails(${recipeIndex})">${recipe.name}</h4>
+                <button onclick="removeFromMealPlan('${day}', '${meal}')">Remove</button>
+            </div>
+        `;
+
+        saveToMealPlan(day, meal, recipe);
+        displayShoppingList();
+    } catch (error) {
+        console.error("Error handling drop:", error);
+    }
+}
+
+
+
+// Function to handle dragging over a meal slot
+function handleDragOver(event) {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+}
+
+function handleDragStart(event) {
+    console.log("Drag started:", event.target); // Debugging
+    const mealItem = event.target.closest(".meal-item, .recipe-card"); // Ensure this targets the correct element
+    if (!mealItem) {
+        console.error("Drag start initiated on an invalid element:", event.target);
+        return;
+    }
+
+    const recipeIndex = mealItem.dataset.recipeIndex; // Ensure this attribute exists
+    if (!recipeIndex) {
+        console.error("Recipe index is missing in drag event target:", mealItem);
+        return;
+    }
+
+    const data = JSON.stringify({ recipeIndex }); // Serialize the recipe index for transfer
+    event.dataTransfer.setData("application/json", data);
+    console.log("Drag start data set:", data);
+    mealItem.style.opacity = "0.5"; // Visual feedback
+}
+
+
+// Function to save the recipe to the meal plan
+function saveToMealPlan(day, meal, recipe) {
+    const mealPlan = JSON.parse(localStorage.getItem('mealPlan')) || {};
+
+    // Clear the recipe from all other slots
+    Object.keys(mealPlan).forEach(existingDay => {
+        Object.keys(mealPlan[existingDay]).forEach(existingMeal => {
+            if (mealPlan[existingDay][existingMeal]?.name === recipe.name) {
+                mealPlan[existingDay][existingMeal] = null; // Remove duplicate reference
+            }
+        });
+    });
+
+    // Assign the recipe to the new slot
+    if (!mealPlan[day]) {
+        mealPlan[day] = {};
+    }
+    mealPlan[day][meal] = recipe;
+
+    localStorage.setItem('mealPlan', JSON.stringify(mealPlan));
+}
+
+// Function to remove a recipe from the meal plan
+function removeFromMealPlan(day, meal) {
+    const mealPlan = JSON.parse(localStorage.getItem('mealPlan'));
+    if (mealPlan[day] && mealPlan[day][meal]) {
+        delete mealPlan[day][meal];
+        localStorage.setItem('mealPlan', JSON.stringify(mealPlan));
+
+        // Clear the slot visually
+        const slot = document.querySelector(`.meal-slot[data-day="${day}"][data-meal="${meal}"]`);
+        slot.innerHTML = meal.charAt(0).toUpperCase() + meal.slice(1);
+
+        // Update the shopping list
+        displayShoppingList(); // <-- Add this line
+    }
+}
+
+
+function loadMealPlan() {
+    const mealPlan = JSON.parse(localStorage.getItem('mealPlan')) || {};
+    const allSlots = document.querySelectorAll('.meal-slot');
+
+    // Clear all slots to remove any outdated content
+    allSlots.forEach(slot => {
+        const mealType = slot.dataset.meal;
+        slot.innerHTML = mealType.charAt(0).toUpperCase() + mealType.slice(1); // Reset slot to default
+    });
+
+    // Track recipes already placed to ensure each appears in only one slot
+    const addedRecipes = new Set();
+
+    Object.keys(mealPlan).forEach(day => {
+        Object.keys(mealPlan[day]).forEach(meal => {
+            const recipe = mealPlan[day][meal];
+            const slot = document.querySelector(`.meal-slot[data-day="${day}"][data-meal="${meal}"]`);
+
+            if (recipe && !addedRecipes.has(recipe.name)) {
+                addedRecipes.add(recipe.name); // Mark recipe as placed
+
+                if (slot) {
+                    slot.innerHTML = `
+                        <div class="meal-item" draggable="true" data-recipe-index="${recipes.findIndex(r => r.name === recipe.name)}" ondragstart="handleDragStart(event)">
+                            <h4 class="recipe-title" onclick="showRecipeDetails(${recipes.findIndex(r => r.name === recipe.name)})">${recipe.name}</h4>
+                            <button onclick="removeFromMealPlan('${day}', '${meal}')">Remove</button>
+                        </div>
+                    `;
+                }
+            }
+        });
+    });
+}
+
+// Call loadMealPlan on page load
+document.addEventListener("DOMContentLoaded", () => {
+    loadMealPlan();
+});
+
+
+function showRecipeDetails(index) {
+    const recipe = recipes[index];
+    const content = document.getElementById('weekly-details-content');
+    const modal = document.getElementById('weekly-details');
+
+    // Populate the content container with recipe details
+    content.innerHTML = `
+        <h3>${recipe.name}</h3>
+        <p><strong>Cooking Time:</strong> ${recipe.time}</p>
+        <p><strong>Category:</strong> ${recipe.mainCategory} (${recipe.subCategory})</p>
+        <p><strong>Ingredients:</strong></p>
+        <ul>
+            ${recipe.ingredients
+                .map(ing => `<li>${ing.quantity} ${ing.unit || ''} ${ing.name}</li>`)
+                .join('')}
+        </ul>
+        <p><strong>Instructions:</strong></p>
+        <ol>
+            ${recipe.instructions
+                .map((step, idx) => `<li>${step}</li>`)
+                .join('')}
+        </ol>
+    `;
+
+    // Show the weekly details box
+    modal.style.display = 'block';
+}
+
+// Event listener for the close button
+document.getElementById('close-weekly-details').addEventListener('click', () => {
+    const modal = document.getElementById('weekly-details');
+    modal.style.display = 'none';
+});
+
+
 // Add new recipe
 document.getElementById('recipe-form').addEventListener('submit', function (e) {
     e.preventDefault();
@@ -155,6 +566,8 @@ document.getElementById('recipe-form').addEventListener('submit', function (e) {
     saveRecipes();
     displayRecipes();
 
+        // Reset modal and close it
+
     this.reset();
     tempIngredients = [];
     tempInstructions = [];
@@ -162,6 +575,7 @@ document.getElementById('recipe-form').addEventListener('submit', function (e) {
     document.getElementById('image-preview').style.display = 'none';
     updateIngredientList();
     updateInstructionList();
+    closeModal('add-recipe-modal'); // Close modal after saving
 });
 
 // Display recipes grouped by categories
@@ -169,6 +583,7 @@ function displayRecipes() {
     const accordion = document.getElementById("accordion");
     accordion.innerHTML = ""; // Clear existing content
 
+    // Group recipes by their main category
     const groupedRecipes = recipes.reduce((groups, recipe) => {
         const groupKey = recipe.mainCategory || "Uncategorized";
         if (!groups[groupKey]) {
@@ -178,12 +593,16 @@ function displayRecipes() {
         return groups;
     }, {});
 
-    Object.keys(groupedRecipes).forEach((category) => {
+    // Sort the categories alphabetically
+    const sortedCategories = Object.keys(groupedRecipes).sort();
+
+    // Render the sorted categories
+    sortedCategories.forEach((category) => {
         const groupRecipes = groupedRecipes[category];
 
         // Create the accordion button
         const button = document.createElement("button");
-        button.className = "accordion-button";
+        button.className = `accordion-button ${category.toLowerCase().replace(/\s+/g, '-')}`; // Add category-specific class
         button.textContent = `${category} (${groupRecipes.length} recipes)`;
         button.addEventListener("click", () => {
             const content = button.nextElementSibling;
@@ -197,31 +616,24 @@ function displayRecipes() {
 
         // Add recipe cards to the content
         groupRecipes.forEach((recipe, index) => {
-            const recipeIndex = recipes.indexOf(recipe); // Ensure correct indexing
             const card = document.createElement("div");
             card.className = "recipe-card";
             card.setAttribute("draggable", "true");
-            card.setAttribute("data-recipe-index", recipeIndex);
+            card.setAttribute("data-recipe-index", recipes.indexOf(recipe)); // Use index from the main recipes array
             card.addEventListener("dragstart", handleDragStart);
             card.addEventListener("dragend", handleDragEnd);
 
-            // Generate star rating dynamically
-            const rating = recipe.rating || 0; // Default to 0 if undefined
-            const filledStars = "⭐".repeat(rating);
-            const emptyStars = "⭐".repeat(5 - rating).replace(/⭐/g, "☆");
-
-            // Recipe card content
             card.innerHTML = `
                 ${recipe.image ? `<img src="${recipe.image}" alt="${recipe.name}" class="recipe-img">` : ""}
                 <h4>${recipe.name}</h4>
                 <p>${recipe.time}, ${recipe.glutenOption}</p>
                 <p>${recipe.subCategory}</p>
-                <p class="stars">${filledStars}${emptyStars}</p>
+                <p class="stars">${'⭐'.repeat(recipe.rating)}</p>
                 <div class="button-group">
-                    <button onclick="addToWeeklyList(${recipeIndex})" class="add">Add</button>
-                    <button onclick="editRecipe(${recipeIndex})" class="edit">Edit</button>
-                    <button onclick="deleteRecipe(${recipeIndex})" class="delete">Delete</button>
-                    <button onclick="copyRecipe(${recipeIndex})" class="copy">Copy</button>
+                    <button onclick="addToWeeklyList(${recipes.indexOf(recipe)})" class="add">Add</button>
+                    <button onclick="editRecipe(${recipes.indexOf(recipe)})" class="edit">Edit</button>
+                    <button onclick="deleteRecipe(${recipes.indexOf(recipe)})" class="delete">Delete</button>
+                    <button onclick="copyRecipe(${recipes.indexOf(recipe)})" class="copy">Copy</button>
                 </div>
             `;
 
@@ -235,34 +647,9 @@ function displayRecipes() {
 }
 
 
-function handleDragStart(event) {
-    const index = event.target.dataset.recipeIndex;
-    event.dataTransfer.setData("text/plain", index);
-    event.target.style.opacity = "0.5"; // Visual feedback
-}
-
 function handleDragEnd(event) {
     event.target.style.opacity = ""; // Reset opacity after dragging
 }
-
-const dropZone = document.getElementById("weekly-dropzone");
-
-dropZone.addEventListener("dragover", (event) => {
-    event.preventDefault();
-    dropZone.style.backgroundColor = "#f0f0f0"; // Visual feedback
-});
-
-dropZone.addEventListener("dragleave", () => {
-    dropZone.style.backgroundColor = ""; // Reset background color
-});
-
-dropZone.addEventListener("drop", (event) => {
-    event.preventDefault();
-    dropZone.style.backgroundColor = ""; // Reset background color
-
-    const index = event.dataTransfer.getData("text/plain");
-    addToWeeklyList(index);
-});
 
 
 function deleteRecipe(index) {
@@ -313,6 +700,13 @@ function addToWeeklyList(index) {
 function displayWeeklyRecipes() {
     const weeklyTabs = document.getElementById('weekly-tabs');
     const weeklyDetails = document.getElementById('weekly-details');
+
+
+    // Check if the elements exist
+    if (!weeklyTabs || !weeklyDetails) {
+        console.error('Elements "weekly-tabs" or "weekly-details" are missing.');
+        return;
+    }
 
     // Clear existing content
     weeklyTabs.innerHTML = '';
@@ -397,7 +791,6 @@ function showWeeklyRecipeDetails(index) {
 }
 
 
-
 document.getElementById('clear-weekly-list').addEventListener('click', function () {
     if (confirm('Are you sure you want to clear the weekly list?')) {
         weeklyRecipes = [];
@@ -409,21 +802,36 @@ document.getElementById('clear-weekly-list').addEventListener('click', function 
 
 // Display shopping list
 function displayShoppingList() {
+    const mealPlan = JSON.parse(localStorage.getItem('mealPlan')) || {};
     const totals = {};
 
-    weeklyRecipes.forEach(recipe => {
-        recipe.ingredients.forEach(({ name, quantity, unit }) => {
-            const key = `${name}-${unit}`;
-            if (!totals[key]) {
-                totals[key] = { name, quantity: 0, unit };
-            }
-            totals[key].quantity += quantity;
+    // Use a Set to track recipe indices to avoid processing duplicates
+    const processedRecipes = new Set();
+
+    Object.keys(mealPlan).forEach(day => {
+        Object.keys(mealPlan[day]).forEach(meal => {
+            const recipe = mealPlan[day][meal];
+
+            // Skip if recipe is null or already processed
+            if (!recipe || processedRecipes.has(recipe.name)) return;
+
+            // Mark this recipe as processed
+            processedRecipes.add(recipe.name);
+
+            // Aggregate ingredients
+            recipe.ingredients.forEach(({ name, quantity, unit }) => {
+                const key = `${name}-${unit}`;
+                if (!totals[key]) {
+                    totals[key] = { name, quantity: 0, unit };
+                }
+                totals[key].quantity += quantity;
+            });
         });
     });
 
-    const shoppingList = document.getElementById('shopping-list');
+    // Update the shopping list display
+    const shoppingList = document.getElementById('shopping-list-items');
     shoppingList.innerHTML = `
-        <h3>Shopping List</h3>
         <ul>
             ${Object.values(totals)
                 .map(({ name, quantity, unit }) => `<li>${quantity} ${unit} ${name}</li>`)
@@ -431,6 +839,8 @@ function displayShoppingList() {
         </ul>
     `;
 }
+
+
 
 // Edit recipe
 function editRecipe(index) {
@@ -520,17 +930,6 @@ document.getElementById('cancel-edit').addEventListener('click', function () {
     document.getElementById('edit-recipe-modal').style.display = 'none';
 });
 
-// Toggle Add New Recipe section
-document.getElementById('toggle-add-recipe').addEventListener('click', function () {
-    const addRecipeSection = document.getElementById('add-recipe');
-    if (addRecipeSection.style.display === 'none') {
-        addRecipeSection.style.display = 'block';
-        this.textContent = 'Hide Add Recipe';
-    } else {
-        addRecipeSection.style.display = 'none';
-        this.textContent = 'Add New Recipe';
-    }
-});
 
 // Clear all recipes
 document.getElementById('clear-recipes-button').addEventListener('click', function () {
@@ -548,11 +947,6 @@ function saveWeeklyRecipes() {
     localStorage.setItem('weeklyRecipes', JSON.stringify(weeklyRecipes));
 }
 
-// Load weekly list on page load
-document.addEventListener('DOMContentLoaded', function () {
-    displayWeeklyRecipes(); // Load and display the weekly list
-    displayShoppingList(); // Display the shopping list
-});
 
 // Toggle Upload Recipes Section
 document.getElementById("toggle-upload-csv").addEventListener("click", function () {
@@ -633,6 +1027,119 @@ function addRecipeFromCSV(data) {
     recipes.push(newRecipe);
 }
 
+// Function to save changes to the current week
+function saveCurrentWeek() {
+    const weekName = document.getElementById('week-name').value.trim();
+
+    if (!weekName) {
+        alert('Please provide a name for the week.');
+        return;
+    }
+
+    const week = {
+        name: weekName,
+        mealPlan: JSON.parse(localStorage.getItem('mealPlan')), // Save the current meal plan
+    };
+
+    if (currentWeekIndex !== null) {
+        // Overwrite the existing week
+        savedWeeks[currentWeekIndex] = week;
+        alert('Week has been updated successfully!');
+    } else {
+        // Save as a new week
+        savedWeeks.push(week);
+        alert('New week has been saved successfully!');
+    }
+
+    localStorage.setItem('savedWeeks', JSON.stringify(savedWeeks));
+    displaySavedWeeks(); // Refresh the saved weeks list
+    currentWeekIndex = null; // Reset current week index
+}
+
+// Function to display saved weeks
+function displaySavedWeeks() {
+    const weeksList = document.getElementById('weeks-list');
+    weeksList.innerHTML = ''; // Clear existing list
+
+    savedWeeks.forEach((week, index) => {
+        const weekDiv = document.createElement('div');
+        weekDiv.className = 'week-item';
+        weekDiv.style.display = 'flex';
+        weekDiv.style.justifyContent = 'space-between';
+        weekDiv.style.alignItems = 'center';
+        weekDiv.style.marginBottom = '10px';
+
+        // Week name
+        const weekName = document.createElement('span');
+        weekName.textContent = week.name;
+        weekName.style.flex = '1';
+
+        // Load button
+        const loadButton = document.createElement('button');
+        loadButton.textContent = 'Load Week';
+        loadButton.style.marginRight = '10px';
+        loadButton.addEventListener('click', () => loadSavedWeek(index));
+
+        // Delete button
+        const deleteButton = document.createElement('button');
+        deleteButton.textContent = 'Delete Week';
+        deleteButton.style.backgroundColor = '#e74c3c';
+        deleteButton.style.color = 'white';
+        deleteButton.addEventListener('click', () => deleteSavedWeek(index));
+
+        weekDiv.appendChild(weekName);
+        weekDiv.appendChild(loadButton);
+        weekDiv.appendChild(deleteButton);
+        weeksList.appendChild(weekDiv);
+    });
+}
+
+// Function to delete a saved week
+function deleteSavedWeek(index) {
+    if (confirm(`Are you sure you want to delete ${savedWeeks[index].name}?`)) {
+        savedWeeks.splice(index, 1);
+        localStorage.setItem('savedWeeks', JSON.stringify(savedWeeks));
+        displaySavedWeeks(); // Refresh the list
+    }
+}
+
+
+let currentWeekIndex = null; // Keep track of the currently loaded week
+
+// Function to load a saved week
+function loadSavedWeek(index) {
+    const selectedWeek = savedWeeks[index];
+    if (!selectedWeek) {
+        alert("Invalid week selected.");
+        return;
+    }
+
+    currentWeekIndex = index; // Set the currently loaded week index
+
+    // Overwrite the current meal plan with the saved one
+    localStorage.setItem("mealPlan", JSON.stringify(selectedWeek.mealPlan));
+    loadMealPlan(); // Refresh the planner
+
+    // Display the week name in an editable input field
+    const weekNameInput = document.getElementById("week-name");
+    weekNameInput.value = selectedWeek.name; // Set the current week's name for editing
+
+    // Refresh the shopping list
+    displayShoppingList(); // <-- Add this line
+
+    alert(`${selectedWeek.name} has been loaded!`);
+}
+
+
+
+// Display saved weeks on page load
+document.addEventListener("DOMContentLoaded", displaySavedWeeks);
+
+
+// Add event listener for the save button
+document.getElementById("save-week").addEventListener("click", saveCurrentWeek);
+
+
 function randomizeWeeklyRecipes() {
     if (recipes.length < 3) {
         alert('Not enough recipes to randomize. Add more recipes to the list.');
@@ -648,7 +1155,43 @@ function randomizeWeeklyRecipes() {
     displayShoppingList(); // Update the shopping list
 }
 
-document.getElementById('randomize-button').addEventListener('click', randomizeWeeklyRecipes);
+// Save button event listener
+document.getElementById("save-week").addEventListener("click", saveCurrentWeek);
+
+// Display saved weeks on page load
+document.addEventListener("DOMContentLoaded", displaySavedWeeks);
+
+//document.getElementById('randomize-button').addEventListener('click', randomizeWeeklyRecipes);
+
+document.getElementById('clear-weekly-list').addEventListener('click', function () {
+    if (confirm('Are you sure you want to clear the weekly list?')) {
+        // Clear the mealPlan object
+        Object.keys(mealPlan).forEach(day => {
+            Object.keys(mealPlan[day]).forEach(meal => {
+                mealPlan[day][meal] = null; // Set all meals to null
+            });
+        });
+
+        // Save the cleared mealPlan to localStorage
+        localStorage.setItem('mealPlan', JSON.stringify(mealPlan));
+
+        // Update the UI by resetting all meal slots
+        const allSlots = document.querySelectorAll('.meal-slot');
+        allSlots.forEach(slot => {
+            const mealType = slot.dataset.meal;
+            slot.innerHTML = `
+                <span class="meal-label">${mealType.charAt(0).toUpperCase() + mealType.slice(1)}</span>
+            `;
+        });
+
+        alert('The weekly list has been cleared!');
+    }
+});
+
+document.addEventListener("DOMContentLoaded", () => {
+    console.log("DOMContentLoaded event fired"); // Debugging log
+    initializeMealPlanner(); // Call your function here
+});
 
 // Display recipes on page load
 displayRecipes();
