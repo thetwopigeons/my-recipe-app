@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recipe Manager</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <h1>Meal Planner</h1>
+        <div id="account-section">
+            Logged in as: <span id="current-account">default</span>
+            <button id="switch-account-button">Switch Account</button>
+        </div>
+    </header>
+    <main>
+        <!-- Button to Show/Hide Add New Recipe Section -->
+        <button onclick="openModal('add-recipe-modal')">Add New Recipe</button>
+
+
+        <section id="upload-csv-toggle-section">
+            <button id="toggle-upload-csv" style="margin-bottom: 1rem;">Upload Recipes</button>
+            <section id="upload-csv-section" style="display: none;">
+                <h2>Upload Recipes via CSV</h2>
+                <input type="file" id="csv-upload" accept=".csv">
+                <button id="upload-csv-button">Upload</button>
+                <p id="upload-status" style="color: red;"></p>
+            </section>
+        </section>
+
+<!-- Add New Recipe Modal -->
+<div id="add-recipe-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <!-- Close Button -->
+        <button class="close" onclick="closeModal('add-recipe-modal')" aria-label="Close">&times;</button>
+        
+        <!-- Modal Title -->
+        <h2>Add New Recipe</h2>
+        
+        <!-- Recipe Form -->
+        <form id="recipe-form">
+            <!-- Recipe Name -->
+            <label for="recipe-name">Recipe Name:</label>
+            <input type="text" id="recipe-name" placeholder="Enter recipe name" required>
+
+            <!-- Cooking Time -->
+            <label for="recipe-time">Cooking Time:</label>
+            <input type="text" id="recipe-time" placeholder="Cooking Time (e.g., 30 mins)" required>
+
+            <!-- Gluten Option -->
+            <label for="gluten-option">Gluten Option:</label>
+            <select id="gluten-option" required>
+                <option value="" disabled selected>Select an option</option>
+                <option value="Gluten Free">Gluten Free</option>
+                <option value="Gluten Free Adapted">Gluten Free Adapted</option>
+                <option value="Contains Gluten">Contains Gluten</option>
+            </select>
+
+            <!-- Main Category -->
+            <label for="main-category">Main Category:</label>
+            <select id="main-category" required>
+                <option value="" disabled selected>Select a category</option>
+                <option value="Breakfast">Breakfast</option>
+                <option value="Lunch">Lunch</option>
+                <option value="Indian">Indian</option>
+                <option value="Asian">Asian</option>
+                <option value="Italian">Italian</option>
+                <option value="British">British</option>
+                <option value="American">American</option>
+                <option value="Mexican">Mexican</option>
+                <option value="Freezer Food">Freezer Food</option>
+            </select>
+
+            <!-- Subcategory -->
+            <label for="sub-category">Subcategory:</label>
+            <select id="sub-category" required>
+                <option value="" disabled selected>Select a subcategory</option>
+                <option value="Chicken">Chicken</option>
+                <option value="Pork">Pork</option>
+                <option value="Beef">Beef</option>
+                <option value="Vegetarian">Vegetarian</option>
+                <option value="Meat Alternative">Meat Alternative</option>
+            </select>
+
+            <!-- Tags Section in Add Recipe Form -->
+<h3>Tags</h3>
+<div id="add-tags-container" class="tags-container">
+    <span class="tag" data-tag="Quick">Quick</span>
+    <span class="tag" data-tag="Easy">Easy</span>
+    <span class="tag" data-tag="Vegetarian">Vegetarian</span>
+    <span class="tag" data-tag="Healthy">Healthy</span>
+    <span class="tag" data-tag="Family Friendly">Family Friendly</span>
+</div>
+<div id="selected-tags" class="selected-tags"></div>
+
+            <!-- Ingredients -->
+            <h3>Ingredients</h3>
+            <label for="bulk-ingredients">Paste ingredients here (one per line):</label>
+            <textarea id="bulk-ingredients" rows="6"></textarea>
+            <button type="button" id="parse-ingredients-button">Parse Ingredients</button>
+            <div id="ingredients-list"></div>
+
+            <!-- Instructions -->
+            <h3>Instructions</h3>
+            <label for="bulk-instructions">Paste instructions here (one per line):</label>
+            <textarea id="bulk-instructions" rows="6"></textarea>
+            <button type="button" id="parse-instructions-button">Parse Instructions</button>
+            <div id="instructions-list"></div>
+
+            <!-- Image Upload -->
+            <h3>Image</h3>
+            <label for="recipe-image">Upload Image:</label>
+            <input type="file" id="recipe-image" accept="image/*">
+            <img id="image-preview" style="max-width: 100%; height: auto; margin: 1rem 0; display: none;">
+
+            <!-- Submit Button -->
+            <button type="submit">Add Recipe</button>
+        </form>
+    </div>
+</div>
+
+<section id="search-recipes">
+    <h2>Search Recipes</h2>
+    <input type="text" id="recipe-search" placeholder="Search for recipes by name" />
+</section>
+
+<section id="filter-recipes">
+    <h2>Filter Recipes</h2>
+    <div class="filter-group">
+        <div class="filter">
+            <button class="filter-button" data-dropdown="time-filter">Time to Cook</button>
+            <div id="time-filter" class="filter-dropdown" style="display: none;">
+                <label><input type="checkbox" value="less than 30 minutes"> Less than 30 minutes</label>
+                <label><input type="checkbox" value="30-60 minutes"> 30-60 minutes</label>
+                <label><input type="checkbox" value="1 hour +"> 1 hour +</label>
+            </div>
+        </div>
+        <div class="filter">
+            <button class="filter-button" data-dropdown="gluten-filter">Gluten Option</button>
+            <div id="gluten-filter" class="filter-dropdown" style="display: none;">
+                <label><input type="checkbox" value="Gluten Free"> Gluten Free</label>
+                <label><input type="checkbox" value="Contains Gluten"> Contains Gluten</label>
+            </div>
+        </div>
+        <div class="filter">
+            <button class="filter-button" data-dropdown="main-category-filter">Cuisine</button>
+            <div id="main-category-filter" class="filter-dropdown" style="display: none;">
+                <label><input type="checkbox" value="Indian"> Indian</label>
+                <label><input type="checkbox" value="Italian"> Italian</label>
+                <label><input type="checkbox" value="Mexican"> Mexican</label>
+            </div>
+        </div>
+        <div class="filter">
+            <button class="filter-button" data-dropdown="subcategory-filter">Meat/Veggie</button>
+            <div id="subcategory-filter" class="filter-dropdown" style="display: none;">
+                <label><input type="checkbox" value="Chicken"> Chicken</label>
+                <label><input type="checkbox" value="Vegetarian"> Vegetarian</label>
+            </div>
+        </div>
+        <div class="filter">
+            <button class="filter-button" data-dropdown="rating-filter">Rating</button>
+            <div id="rating-filter" class="filter-dropdown" style="display: none;">
+                <label><input type="radio" name="rating" value="1"> 1 Star & Up</label>
+                <label><input type="radio" name="rating" value="2"> 2 Stars & Up</label>
+                <label><input type="radio" name="rating" value="3"> 3 Stars & Up</label>
+                <label><input type="radio" name="rating" value="4"> 4 Stars & Up</label>
+                <label><input type="radio" name="rating" value="5"> 5 Stars</label>
+            </div>
+        </div>
+    </div>
+    <button id="apply-filters">Filter</button>
+</section>
+
+<section id="search-results" style="display: none;">
+    <h2>Search Results</h2>
+    <div id="search-results-container"></div>
+</section>
+
+<section id="all-recipes">
+    <h2>All Recipes</h2>
+    <div class="accordion" id="accordion">
+        <!-- Accordion items will be dynamically generated by JavaScript -->
+    </div>
+</section>
+       <!-- Meal Planner Section -->
+       <section id="meal-plan">
+        <h2>Weekly Meal Planner</h2>
+        <div id="meal-plan-grid">
+            <div class="day-column" id="monday">
+                <h3>Monday</h3>
+                <div class="meal-slot" data-day="monday" data-meal="breakfast">
+                    <span class="meal-label">Breakfast</span>
+                </div>
+                <div class="meal-slot" data-day="monday" data-meal="lunch">
+                    <span class="meal-label">Lunch</span>
+                </div>
+                <div class="meal-slot" data-day="monday" data-meal="dinner">
+                    <span class="meal-label">Dinner</span>
+                </div>
+            </div>
+            <div class="day-column" id="tuesday">
+                <h3>Tuesday</h3>
+                <div class="meal-slot" data-day="tuesday" data-meal="breakfast">
+                    <span class="meal-label">Breakfast</span>
+                </div>
+                <div class="meal-slot" data-day="tuesday" data-meal="lunch">
+                    <span class="meal-label">Lunch</span>
+                </div>
+                <div class="meal-slot" data-day="tuesday" data-meal="dinner">
+                    <span class="meal-label">Dinner</span>
+                </div>
+            </div>
+            <div class="day-column" id="wednesday">
+                <h3>Wednesday</h3>
+                <div class="meal-slot" data-day="wednesday" data-meal="breakfast">
+                    <span class="meal-label">Breakfast</span>
+                </div>
+                <div class="meal-slot" data-day="wednesday" data-meal="lunch">
+                    <span class="meal-label">Lunch</span>
+                </div>
+                <div class="meal-slot" data-day="wednesday" data-meal="dinner">
+                    <span class="meal-label">Dinner</span>
+                </div>
+            </div>
+            <div class="day-column" id="thursday">
+                <h3>Thursday</h3>
+                <div class="meal-slot" data-day="thursday" data-meal="breakfast">
+                    <span class="meal-label">Breakfast</span>
+                </div>
+                <div class="meal-slot" data-day="thursday" data-meal="lunch">
+                    <span class="meal-label">Lunch</span>
+                </div>
+                <div class="meal-slot" data-day="thursday" data-meal="dinner">
+                    <span class="meal-label">Dinner</span>
+                </div>
+            </div>
+            <div class="day-column" id="friday">
+                <h3>Friday</h3>
+                <div class="meal-slot" data-day="friday" data-meal="breakfast">
+                    <span class="meal-label">Breakfast</span>
+                </div>
+                <div class="meal-slot" data-day="friday" data-meal="lunch">
+                    <span class="meal-label">Lunch</span>
+                </div>
+                <div class="meal-slot" data-day="friday" data-meal="dinner">
+                    <span class="meal-label">Dinner</span>
+                </div>
+            </div>
+            <div class="day-column" id="saturday">
+                <h3>Saturday</h3>
+                <div class="meal-slot" data-day="saturday" data-meal="breakfast">
+                    <span class="meal-label">Breakfast</span>
+                </div>
+                <div class="meal-slot" data-day="saturday" data-meal="lunch">
+                    <span class="meal-label">Lunch</span>
+                </div>
+                <div class="meal-slot" data-day="saturday" data-meal="dinner">
+                    <span class="meal-label">Dinner</span>
+                </div>
+            </div>
+            <div class="day-column" id="sunday">
+                <h3>Sunday</h3>
+                <div class="meal-slot" data-day="sunday" data-meal="breakfast">
+                    <span class="meal-label">Breakfast</span>
+                </div>
+                <div class="meal-slot" data-day="sunday" data-meal="lunch">
+                    <span class="meal-label">Lunch</span>
+                </div>
+                <div class="meal-slot" data-day="sunday" data-meal="dinner">
+                    <span class="meal-label">Dinner</span>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <section id="weekly-list-section">
+        <div id="weekly-tabs" style="margin-bottom: 20px;">
+            <!-- Weekly recipe tabs will be dynamically populated here -->
+        </div>
+        
+        <div id="weekly-details" style="display: none; border: 1px solid #ccc; padding: 20px; background-color: #f9f9f9;">
+            <button id="close-weekly-details" style="float: right; margin-bottom: 10px;">Close</button>
+            <div id="weekly-details-content"></div> <!-- Container for dynamic content -->
+        </div>
+    
+        <button id="clear-weekly-list" style="background-color: red; color: white; margin-top: 20px;">Clear Weekly List</button>
+    
+        <section id="save-week-section">
+            <h2>Save Week</h2>
+            <label for="week-name">Week Name:</label>
+            <input type="text" id="week-name" placeholder="Enter a name for this week" style="margin-bottom: 10px;">
+            <button id="save-week" style="margin-top: 10px;">Save Week</button>
+        </section>
+        
+        <h2>Saved Weeks</h2>
+        <div id="weeks-list"></div>
+    
+        <h3>Shopping List</h3>
+        <div id="shopping-list-items"></div>
+    </section>
+
+        <!-- Edit Recipe Modal -->
+        <div id="edit-recipe-modal" style="display: none; position: fixed; top: 20%; left: 50%; transform: translate(-50%, -20%); background: white; border: 1px solid #ccc; padding: 20px; z-index: 1000; width: 50%;">
+            <h2>Edit Recipe</h2>
+            <form id="edit-recipe-form">
+                <!-- Recipe Name -->
+                <input type="text" id="edit-recipe-name" placeholder="Recipe Name" required>
+        
+                <!-- Cooking Time -->
+                <input type="text" id="edit-recipe-time" placeholder="Cooking Time (e.g., 30 mins)" required>
+        
+                <!-- Gluten Option -->
+                <label for="edit-gluten-option">Gluten Option:</label>
+                <select id="edit-gluten-option" required>
+                    <option value="Gluten Free">Gluten Free</option>
+                    <option value="Gluten Free Adapted">Gluten Free Adapted</option>
+                    <option value="Contains Gluten">Contains Gluten</option>
+                </select>
+        
+                <!-- Main Category -->
+                <label for="edit-main-category">Main Category (Cuisine):</label>
+                <select id="edit-main-category" required>
+                    <option value="Breakfast">Breakfast</option>
+                    <option value="Lunch">Lunch</option>
+                    <option value="Indian">Indian</option>
+                    <option value="Asian">Asian</option>
+                    <option value="Italian">Italian</option>
+                    <option value="British">British</option>
+                    <option value="American">American</option>
+                    <option value="Mexican">Mexican</option>
+                    <option value="Freezer Food">Freezer Food</option>
+                </select>
+        
+                <!-- Subcategory -->
+                <label for="edit-sub-category">Subcategory (Meat/Veggie):</label>
+                <select id="edit-sub-category" required>
+                    <option value="Chicken">Chicken</option>
+                    <option value="Pork">Pork</option>
+                    <option value="Beef">Beef</option>
+                    <option value="Vegetarian">Vegetarian</option>
+                    <option value="Meat Alternative">Meat Alternative</option>
+                </select>
+
+                <!-- Tags Section in Edit Recipe Form -->
+<h3>Tags</h3>
+<div id="edit-tags-container" class="tags-container">
+    <span class="tag" data-tag="Quick">Quick</span>
+    <span class="tag" data-tag="Easy">Easy</span>
+    <span class="tag" data-tag="Vegetarian">Vegetarian</span>
+    <span class="tag" data-tag="Healthy">Healthy</span>
+    <span class="tag" data-tag="Family Friendly">Family Friendly</span>
+</div>
+<div id="edit-selected-tags" class="selected-tags"></div>
+
+        
+                <!-- Ingredients -->
+                <h3>Ingredients</h3>
+                <textarea id="edit-bulk-ingredients" rows="6" placeholder="Paste ingredients here (one per line)"></textarea>
+        
+                <!-- Instructions -->
+                <h3>Instructions</h3>
+                <textarea id="edit-bulk-instructions" rows="6" placeholder="Paste instructions here (one per line)"></textarea>
+        
+                <!-- Image Upload -->
+                <h3>Image</h3>
+                <input type="file" id="edit-recipe-image" accept="image/*">
+                <img id="edit-image-preview" style="max-width: 100%; height: auto; margin: 1rem 0; display: none;">
+        
+                <!-- Recipe Rating -->
+                <h3>Rating</h3>
+                <label for="edit-recipe-rating">Rating:</label>
+                <select id="edit-recipe-rating">
+                    <option value="0">Not Rated</option>
+                    <option value="1">1 Star</option>
+                    <option value="2">2 Stars</option>
+                    <option value="3">3 Stars</option>
+                    <option value="4">4 Stars</option>
+                    <option value="5">5 Stars</option>
+                </select>
+        
+                <!-- Buttons -->
+                <button type="submit">Save Changes</button>
+                <button type="button" id="cancel-edit" style="background-color: red; color: white;">Cancel</button>
+            </form>
+            </div>
+
+        <!-- Randomize Recipes Button -->
+        <!--<button id="randomize-button">Randomize Weekly Recipes</button> -->
+
+        <!-- Clear All Recipes Button -->
+        <button id="clear-recipes-button" style="background-color: red; color: white; margin-top: 1rem;">Clear All Recipes</button>
+
+        <button id="download-recipes">Download Recipes</button>
+<input type="file" id="upload-recipes" style="display: none;" accept=".json">
+<button id="upload-recipes-btn">Upload Recipes</button>
+
+    </main>
+    <script src="scripts.js"></script>
+</body>
+</html>
