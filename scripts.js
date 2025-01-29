@@ -159,96 +159,6 @@ function clearSearchResults() {
     resultsContainer.innerHTML = ''; // Clear the results
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-    const filterButton = document.getElementById("apply-filters");
-    const resetButton = document.createElement("button");
-    resetButton.textContent = "Reset Filters";
-    resetButton.style.margin = "1rem 0";
-    resetButton.id = "reset-filters";
-    filterButton.parentElement.insertBefore(resetButton, filterButton.nextSibling);
-
-    const selectedFiltersContainer = document.createElement("div");
-    selectedFiltersContainer.id = "selected-filters-container";
-    selectedFiltersContainer.style.margin = "1rem 0";
-    filterButton.parentElement.insertBefore(selectedFiltersContainer, filterButton);
-
-    function updateSelectedFiltersDisplay() {
-        const selectedTime = Array.from(document.querySelectorAll('#time-filter input:checked')).map(opt => opt.value);
-        const selectedGluten = Array.from(document.querySelectorAll('#gluten-filter input:checked')).map(opt => opt.value);
-        const selectedCategory = Array.from(document.querySelectorAll('#main-category-filter input:checked')).map(opt => opt.value);
-        const selectedSubcategory = Array.from(document.querySelectorAll('#subcategory-filter input:checked')).map(opt => opt.value);
-        const selectedRating = document.querySelector('#rating-filter input:checked')?.value || null;
-
-        const allSelectedFilters = [
-            ...selectedTime.map(value => `Time: ${value}`),
-            ...selectedGluten.map(value => `Gluten: ${value}`),
-            ...selectedCategory.map(value => `Category: ${value}`),
-            ...selectedSubcategory.map(value => `Subcategory: ${value}`),
-            selectedRating ? `Rating: ${selectedRating} Star${selectedRating > 1 ? "s" : ""}` : null,
-        ].filter(Boolean);
-
-        selectedFiltersContainer.innerHTML = allSelectedFilters.length > 0
-            ? `<strong>Selected Filters:</strong> ${allSelectedFilters.join(", ")}`
-            : "No filters selected.";
-    }
-
-    function filterRecipes() {
-        const selectedTime = Array.from(document.querySelectorAll('#time-filter input:checked')).map(opt => opt.value);
-        const selectedGluten = Array.from(document.querySelectorAll('#gluten-filter input:checked')).map(opt => opt.value);
-        const selectedCategory = Array.from(document.querySelectorAll('#main-category-filter input:checked')).map(opt => opt.value);
-        const selectedSubcategory = Array.from(document.querySelectorAll('#subcategory-filter input:checked')).map(opt => opt.value);
-        const selectedRating = parseInt(document.querySelector('#rating-filter input:checked')?.value || '0', 10);
-
-        const matchingRecipes = recipes.filter(recipe => {
-            const matchesTime = selectedTime.length === 0 || selectedTime.some(time => recipe.time.includes(time));
-            const matchesGluten = selectedGluten.length === 0 || selectedGluten.includes(recipe.glutenOption);
-            const matchesCategory = selectedCategory.length === 0 || selectedCategory.includes(recipe.mainCategory);
-            const matchesSubcategory = selectedSubcategory.length === 0 || selectedSubcategory.includes(recipe.subCategory);
-            const matchesRating = recipe.rating >= selectedRating;
-
-            return matchesTime && matchesGluten && matchesCategory && matchesSubcategory && matchesRating;
-        });
-
-        displaySearchResults(matchingRecipes, false); // 'false' indicates filter-based search
-    }
-
-    // Attach the filter button functionality
-    filterButton.addEventListener("click", filterRecipes);
-
-    // Handle reset filters button
-    resetButton.addEventListener("click", () => {
-        // Clear all filter selections
-        document.querySelectorAll('.filter-dropdown input:checked').forEach(input => (input.checked = false));
-        updateSelectedFiltersDisplay();
-        clearSearchResults(); // Clear recipe cards from view
-    });
-
-    // Dropdown functionality
-    document.querySelectorAll(".filter-dropdown").forEach(dropdown => {
-        const button = dropdown.previousElementSibling;
-        button.addEventListener("click", (event) => {
-            event.stopPropagation(); // Prevent document click listener from firing
-            const isVisible = dropdown.style.display === "block";
-            document.querySelectorAll(".filter-dropdown").forEach(dd => (dd.style.display = "none")); // Close other dropdowns
-            dropdown.style.display = isVisible ? "none" : "block"; // Toggle this dropdown
-        });
-    });
-
-    // Close dropdowns when clicking outside
-    document.addEventListener("click", () => {
-        document.querySelectorAll(".filter-dropdown").forEach(dd => (dd.style.display = "none"));
-    });
-
-    // Update filters on selection
-    document.querySelectorAll(".filter-dropdown input").forEach(input => {
-        input.addEventListener("change", () => {
-            updateSelectedFiltersDisplay();
-        });
-    });
-
-    // Initialize the selected filters display
-    updateSelectedFiltersDisplay();
-});
 
 
 function saveRecipes() {
@@ -278,19 +188,56 @@ function parseFraction(input) {
     return total;
 }
 
-// Update the ingredient list display
-function updateIngredientList() {
-    const ingredientsList = document.getElementById('ingredients-list');
-    ingredientsList.innerHTML = tempIngredients
-        .map(ingredient => `
-            <div>
-                ${ingredient.quantity} 
-                ${ingredient.unit ? ingredient.unit + ' ' : ''} 
-                ${ingredient.name}
-            </div>
-        `)
-        .join('');
+document.addEventListener("DOMContentLoaded", () => {
+    console.log("DOMContentLoaded event fired"); // Debugging log
+
+    // Initialize essential functions
+    initializeMealPlanner();
+    loadMealPlan();
+    displaySavedWeeks();
+    displayShoppingList();
+
+    // Attach filter button event listeners
+    //document.getElementById("apply-filters").addEventListener("click", filterRecipes);
+    //document.getElementById("reset-filters").addEventListener("click", resetFilters);
+
+    // Initialize selected filters display
+    //updateSelectedFiltersDisplay();
+
+    // Close dropdowns when clicking outside
+    document.addEventListener("click", () => {
+        document.querySelectorAll(".filter-dropdown").forEach(dd => (dd.style.display = "none"));
+    });
+
+    // Attach dropdown toggle event listeners
+    document.querySelectorAll(".filter-dropdown input").forEach(input => {
+        input.addEventListener("change", updateSelectedFiltersDisplay);
+    });
+
+    console.log("Filter event listeners attached");
+});
+
+function updateSelectedFiltersDisplay() {
+    const selectedTime = Array.from(document.querySelectorAll('#time-filter input:checked')).map(opt => opt.value);
+    const selectedGluten = Array.from(document.querySelectorAll('#gluten-filter input:checked')).map(opt => opt.value);
+    const selectedCategory = Array.from(document.querySelectorAll('#main-category-filter input:checked')).map(opt => opt.value);
+    const selectedSubcategory = Array.from(document.querySelectorAll('#subcategory-filter input:checked')).map(opt => opt.value);
+    const selectedRating = document.querySelector('#rating-filter input:checked')?.value || null;
+
+    const allSelectedFilters = [
+        ...selectedTime.map(value => `Time: ${value}`),
+        ...selectedGluten.map(value => `Gluten: ${value}`),
+        ...selectedCategory.map(value => `Category: ${value}`),
+        ...selectedSubcategory.map(value => `Subcategory: ${value}`),
+        selectedRating ? `Rating: ${selectedRating} Star${selectedRating > 1 ? "s" : ""}` : null,
+    ].filter(Boolean);
+
+    document.getElementById('selected-filters-container').innerHTML =
+        allSelectedFilters.length > 0
+            ? `<strong>Selected Filters:</strong> ${allSelectedFilters.join(", ")}`
+            : "No filters selected.";
 }
+
 
 // Update the instruction list display
 function updateInstructionList() {
@@ -300,88 +247,129 @@ function updateInstructionList() {
         .join('');
 }
 
-// Parse bulk ingredients
+function parseIngredientLine(line) {
+    const trimmedLine = line.trim();
+    if (!trimmedLine) return null;
+
+    const match = trimmedLine.match(/^(\d+(?:\.\d+)?(?:\s\d+\/\d+)?)?\s*([\w\-]*)\s+(.+)$/i);
+
+    if (match) {
+        let [_, rawQuantity, unit, name] = match;
+        let quantity = rawQuantity ? rawQuantity.trim() : "";
+
+        // Handle mixed fractions (e.g., "1 1/2")
+        if (quantity.includes(" ")) {
+            const parts = quantity.split(" ");
+            const wholeNumber = parseFloat(parts[0]);
+            const fractionParts = parts[1].split("/");
+            quantity = wholeNumber + (parseFloat(fractionParts[0]) / parseFloat(fractionParts[1]));
+        } else if (quantity.includes("/")) {
+            const fractionParts = quantity.split("/");
+            quantity = parseFloat(fractionParts[0]) / parseFloat(fractionParts[1]);
+        } else if (quantity.startsWith(".")) {
+            quantity = `0${quantity}`; // Convert ".5" to "0.5"
+        }
+
+        quantity = quantity ? parseFloat(quantity) : 1; // Default to 1 if empty
+
+        // Standardize units
+        const unitMap = {
+            tbsp: "tablespoon",
+            tbspn: "tablespoon",
+            tsps: "teaspoon",
+            tsp: "teaspoon",
+            cups: "cup",
+            oz: "ounce",
+            g: "gram",
+            kg: "kilogram",
+            ml: "milliliter",
+            l: "liter",
+            inch: "inch",
+            can: "can",
+            clove: "clove",
+            sprig: "sprig",
+            stick: "stick",
+            bunch: "bunch",
+            null: "", // Ensure missing units are empty, not "null"
+        };
+
+        unit = unit ? unit.toLowerCase().trim() : "";
+        unit = unitMap[unit] || unit; // Standardize unit names
+
+        return {
+            quantity: quantity,
+            unit: unit,
+            name: name.replace(/\s+/g, " ").trim(), // 🔥 Fix extra spaces in name
+        };
+    }
+
+    return {
+        quantity: 1,
+        unit: "",
+        name: trimmedLine.replace(/\s+/g, " ").trim(), // 🔥 Trim here too
+    };
+}
+
+
+
+function updateIngredientList() {
+    const ingredientsList = document.getElementById('ingredients-list');
+    if (!ingredientsList) {
+        console.error("Element with ID 'ingredients-list' not found.");
+        return;
+    }
+
+    ingredientsList.innerHTML = tempIngredients
+        .map(ingredient => `
+            <div>
+                ${ingredient.quantity ? ingredient.quantity + ' ' : ''}
+                ${ingredient.unit ? ingredient.unit + ' ' : ''}
+                ${ingredient.name}
+            </div>
+        `)
+        .join('');
+}
+
+
+function updateInstructionList() {
+    const instructionsList = document.getElementById('instructions-list');
+    if (!instructionsList) {
+        console.error("Element with ID 'instructions-list' not found.");
+        return;
+    }
+
+    instructionsList.innerHTML = tempInstructions
+        .map((instruction, index) => `<div>${index + 1}. ${instruction}</div>`)
+        .join('');
+}
+
+
+
 document.getElementById('parse-ingredients-button').addEventListener('click', function () {
     const bulkInput = document.getElementById('bulk-ingredients').value.trim();
     const lines = bulkInput.split('\n');
-    const ingredients = [];
 
-    lines.forEach(line => {
-        const trimmedLine = line.trim();
+    tempIngredients = lines
+        .map(parseIngredientLine) // Use our function
+        .filter(Boolean); // Remove null values
 
-        if (trimmedLine === '') return;
-
-        // Updated regex to handle cases like "1 1/2 onion", "400ml can tomatoes", "2 tbsp sugar"
-        const match = trimmedLine.match(/^(\d+(?:\.\d+)?(?:\s\d+\/\d+)?|\d+\/\d+)?\s*([\w\-]+)?\s+(.*)$/i);
-
-        if (match) {
-            let [_, rawQuantity, unit, name] = match;
-            let quantity = rawQuantity ? rawQuantity.toString() : null;
-
-            // Handle mixed fractions (e.g., "1 1/2")
-            if (quantity && quantity.includes(" ")) {
-                const parts = quantity.split(" ");
-                const wholeNumber = parseFloat(parts[0]);
-                const fractionParts = parts[1].split("/");
-                quantity = wholeNumber + (parseFloat(fractionParts[0]) / parseFloat(fractionParts[1]));
-            }
-
-            // Handle fractions only (e.g., "1/2")
-            else if (quantity && quantity.includes("/")) {
-                const fractionParts = quantity.split("/");
-                quantity = parseFloat(fractionParts[0]) / parseFloat(fractionParts[1]);
-            }
-
-            // Convert quantity to a number for final storage
-            quantity = quantity ? parseFloat(quantity) : 1;
-
-            // Standardize units
-            const standardUnitMap = {
-                tbsp: "tablespoon",
-                tsps: "teaspoon",
-                tsp: "teaspoon",
-                cups: "cup",
-                oz: "ounce",
-                g: "gram",
-                kg: "kilogram",
-                ml: "milliliter",
-                l: "liter",
-                null: null, // Handle missing unit
-            };
-
-            unit = unit ? standardUnitMap[unit.toLowerCase()] || unit : null;
-
-            // Push parsed ingredient
-            ingredients.push({
-                quantity: quantity,
-                unit: unit,
-                name: name.trim(),
-            });
-        } else {
-            console.warn(`Could not parse line: ${trimmedLine}`);
-        }
-    });
-
-    tempIngredients = ingredients;
     updateIngredientList();
     document.getElementById('bulk-ingredients').value = ''; // Clear input
 });
 
-
-// Parse bulk instructions
-document.getElementById('parse-instructions-button').addEventListener('click', function () {
+document.getElementById('parse-instructions-button').addEventListener('click', function () { 
     const bulkInput = document.getElementById('bulk-instructions').value.trim();
     const lines = bulkInput.split('\n');
 
-    lines.forEach(line => {
-        if (line.trim()) {
-            tempInstructions.push(line.trim());
-        }
-    });
+    // Store parsed instructions
+    tempInstructions = lines
+        .map(line => line.trim())
+        .filter(line => line.length > 0); // Remove empty lines
 
-    updateInstructionList();
+    updateInstructionList(); // Update UI
     document.getElementById('bulk-instructions').value = ''; // Clear input
 });
+
 
 // Handle image upload
 document.getElementById('recipe-image').addEventListener('change', function (event) {
@@ -452,9 +440,10 @@ function handleDrop(event, day, meal) {
         // Add the recipe to the new slot
         const slot = document.querySelector(`.meal-slot[data-day="${day}"][data-meal="${meal}"]`);
         slot.innerHTML = `
-            <div class="meal-item" draggable="true" data-recipe-index="${recipeIndex}" ondragstart="handleDragStart(event)">
-                <h4 class="recipe-title" onclick="showRecipeDetails(${recipeIndex})">${recipe.name}</h4>
-                <button onclick="removeFromMealPlan('${day}', '${meal}')">Remove</button>
+             <div class="meal-item" draggable="true" data-recipe-index="${recipeIndex}" ondragstart="handleDragStart(event)">
+                <h4 class="recipe-title">${recipe.name}</h4>
+                <button class="show-recipe-button" onclick="showRecipeDetails(${recipeIndex})">Show Recipe</button>
+                <button class="remove-recipe-button" onclick="removeFromMealPlan('${day}', '${meal}')">Remove</button>
             </div>
         `;
 
@@ -537,9 +526,11 @@ function removeFromMealPlan(day, meal) {
 
 function loadMealPlan() {
     const allSlots = document.querySelectorAll('.meal-slot');
+
+    // Reset all slots to just their category labels
     allSlots.forEach(slot => {
         const mealType = slot.dataset.meal;
-        slot.innerHTML = `<span class="meal-label">${mealType.charAt(0).toUpperCase() + mealType.slice(1)}</span>`; // Reset slot
+        slot.innerHTML = `<span class="meal-label">${mealType.charAt(0).toUpperCase() + mealType.slice(1)}</span>`;
     });
 
     const mealPlan = accounts[currentAccount].mealPlan || {
@@ -552,62 +543,30 @@ function loadMealPlan() {
         sunday: { breakfast: null, lunch: null, dinner: null },
     };
 
+    // Loop through each day's meal slots and re-add the recipe card with buttons
     Object.keys(mealPlan).forEach(day => {
         Object.keys(mealPlan[day]).forEach(meal => {
             const recipe = mealPlan[day][meal];
             const slot = document.querySelector(`.meal-slot[data-day="${day}"][data-meal="${meal}"]`);
+
             if (recipe && slot) {
+                const recipeIndex = recipes.findIndex(r => r.name === recipe.name);
+                if (recipeIndex === -1) return; // Skip if the recipe isn't found
+
                 slot.innerHTML = `
-                    <div class="meal-item" draggable="true" data-recipe-index="${recipes.findIndex(r => r.name === recipe.name)}" ondragstart="handleDragStart(event)">
-                        <h4 class="recipe-title" onclick="showRecipeDetails(${recipes.findIndex(r => r.name === recipe.name)})">${recipe.name}</h4>
-                        <button onclick="removeFromMealPlan('${day}', '${meal}')">Remove</button>
+                    <div class="meal-item" draggable="true" data-recipe-index="${recipeIndex}" ondragstart="handleDragStart(event)">
+                        <h4 class="recipe-title">${recipe.name}</h4>
+                        <button class="show-recipe-button" onclick="showRecipeDetails(${recipeIndex})">Show Recipe</button>
+                        <button class="remove-recipe-button" onclick="removeFromMealPlan('${day}', '${meal}')">Remove</button>
                     </div>
                 `;
             }
         });
     });
+
+    console.log("Meal plan loaded successfully.");
 }
 
-
-// Call loadMealPlan on page load
-document.addEventListener("DOMContentLoaded", () => {
-    loadMealPlan();
-});
-
-
-function showRecipeDetails(index) {
-    const recipe = recipes[index];
-    const content = document.getElementById('weekly-details-content');
-    const modal = document.getElementById('weekly-details');
-
-    // Populate the content container with recipe details
-    content.innerHTML = `
-        <h3>${recipe.name}</h3>
-        <p><strong>Cooking Time:</strong> ${recipe.time}</p>
-        <p><strong>Category:</strong> ${recipe.mainCategory} (${recipe.subCategory})</p>
-        <p><strong>Ingredients:</strong></p>
-        <ul>
-            ${recipe.ingredients
-                .map(ing => `<li>${ing.quantity} ${ing.unit || ''} ${ing.name}</li>`)
-                .join('')}
-        </ul>
-        <p><strong>Instructions:</strong></p>
-        <ol>
-            ${recipe.instructions
-                .map((step, idx) => `<li>${step}</li>`)
-                .join('')}
-        </ol>
-    `;
-
-    // Show the weekly details box
-    modal.style.display = 'block';
-}
-
-// Event listener for the close button
-document.getElementById('close-weekly-details').addEventListener('click', () => {
-    const modal = document.getElementById('weekly-details');
-    modal.style.display = 'none';
-});
 
 
 // Add new recipe
@@ -866,6 +825,55 @@ function showWeeklyRecipeDetails(index) {
 }
 
 
+function showRecipeDetails(index) {
+    const recipe = recipes[index];
+
+    if (!recipe) {
+        console.error("Recipe not found for index:", index);
+        return;
+    }
+
+    const detailsContainer = document.getElementById("recipe-details-content");
+    const detailsSection = document.getElementById("recipe-details");
+
+    // Ensure the details container exists
+    if (!detailsContainer) {
+        console.error("Required element is missing: Ensure #recipe-details-content exists in your HTML.");
+        return;
+    }
+
+    // Populate the details content
+    detailsContainer.innerHTML = `
+        <h3>${recipe.name}</h3>
+        <p><strong>Cooking Time:</strong> ${recipe.time}</p>
+        <p><strong>Category:</strong> ${recipe.mainCategory} (${recipe.subCategory})</p>
+        <p><strong>Ingredients:</strong></p>
+        <ul>
+            ${recipe.ingredients.map(ing => `<li>${ing.quantity || ""} ${ing.unit || ""} ${ing.name}</li>`).join("")}
+        </ul>
+        <p><strong>Instructions:</strong></p>
+        <ol>
+            ${recipe.instructions.map((step, idx) => `<li>${step}</li>`).join("")}
+        </ol>
+    `;
+
+    // Show the section
+    detailsSection.style.display = "block";
+}
+
+// Close the details section when clicking "Close"
+function closeRecipeDetails() {
+    document.getElementById("recipe-details").style.display = "none";
+}
+
+
+// Close the modal on button click
+document.getElementById('close-weekly-details').addEventListener('click', () => {
+    document.getElementById('weekly-details').style.display = 'none';
+});
+
+
+
 document.getElementById('clear-weekly-list').addEventListener('click', function () {
     if (confirm('Are you sure you want to clear the weekly list?')) {
         weeklyRecipes = [];
@@ -877,55 +885,182 @@ document.getElementById('clear-weekly-list').addEventListener('click', function 
 
 // Display shopping list
 function displayShoppingList() {
-    // Use account-specific mealPlan
-    const mealPlan = accounts[currentAccount].mealPlan || {
-        monday: { breakfast: null, lunch: null, dinner: null },
-        tuesday: { breakfast: null, lunch: null, dinner: null },
-        wednesday: { breakfast: null, lunch: null, dinner: null },
-        thursday: { breakfast: null, lunch: null, dinner: null },
-        friday: { breakfast: null, lunch: null, dinner: null },
-        saturday: { breakfast: null, lunch: null, dinner: null },
-        sunday: { breakfast: null, lunch: null, dinner: null },
-    };
-
+    const mealPlan = accounts[currentAccount].mealPlan || {};
     const totals = {};
-
-    // Use a Set to track recipe indices to avoid processing duplicates
     const processedRecipes = new Set();
+
+    // Categorization of ingredients
+    const categories = {
+        "Fresh Produce": ["pepper", "onion", "garlic", "carrot", "aubergine", "chilli", "lemon", "baby spinach", "cloves"],
+        "Herbs & Spices": ["basil", "coriander", "cinnamon", "turmeric", "garam masala", "cumin", "ginger", "oregano", "rosemary", "thyme", "cilantro", "indian red chili powder", "curry powder"],
+        "Dry Goods": ["pasta", "lasagne sheets", "rice", "lentils", "flour", "linguine"],
+        "Dairy": ["butter", "milk", "mozzarella", "cream"],
+        "Oils & Condiments": ["olive oil", "coconut oil", "vegetable broth", "tomato purée", "white wine", "almond butter"],
+        "Meat & Fish": ["chicken", "beef", "salmon", "pork", "salmon fillets", "fillets"],
+        "Tins & Jars": ["canned tomatoes", "crushed tomatoes", "chopped tomatoes", "capers"]
+    };
 
     Object.keys(mealPlan).forEach(day => {
         Object.keys(mealPlan[day]).forEach(meal => {
             const recipe = mealPlan[day][meal];
-
-            // Skip if recipe is null or already processed
             if (!recipe || processedRecipes.has(recipe.name)) return;
-
-            // Mark this recipe as processed
             processedRecipes.add(recipe.name);
 
-            // Aggregate ingredients
             recipe.ingredients.forEach(({ name, quantity, unit }) => {
-                const key = `${name}-${unit}`;
+                const key = `${name}-${unit || ''}`;
                 if (!totals[key]) {
-                    totals[key] = { name, quantity: 0, unit };
+                    totals[key] = { name, quantity: 0, unit: unit || '' };
                 }
                 totals[key].quantity += quantity;
             });
         });
     });
 
-    // Update the shopping list display
-    const shoppingList = document.getElementById('shopping-list-items');
-    shoppingList.innerHTML = `
-        <ul>
-            ${Object.values(totals)
-                .map(({ name, quantity, unit }) => `<li>${quantity} ${unit} ${name}</li>`)
-                .join('')}
-        </ul>
-    `;
+    // Function to categorize ingredients correctly
+    function categorizeIngredient(name) {
+        name = name.toLowerCase();
+        
+        // Fix for garlic cloves
+        if (name.includes("garlic") || name.includes("cloves")) return "Fresh Produce";
+        
+        // Fix for salmon fillets
+        if (name.includes("salmon") || name.includes("fillets")) return "Meat & Fish";
+
+        for (const [category, items] of Object.entries(categories)) {
+            if (items.some(item => name.includes(item))) {
+                return category;
+            }
+        }
+        return "Other";
+    }
+
+    // Group ingredients into categories
+    const categorizedItems = {};
+    Object.values(totals).forEach(({ name, quantity, unit }) => {
+        let category = categorizeIngredient(name);
+        if (!categorizedItems[category]) categorizedItems[category] = [];
+        categorizedItems[category].push({
+            fullText: `${quantity} ${unit} ${name}`.trim(),  // UI display with units
+            copyText: cleanIngredientName(`${quantity} ${unit} ${name}`.trim()),  // Stripped for clipboard
+            id: `ingredient-${name.replace(/\s+/g, "-").toLowerCase()}`
+        });
+    });
+
+    // Generate shopping list with checkboxes
+    const shoppingListContainer = document.getElementById("shopping-list-items");
+    shoppingListContainer.innerHTML = Object.entries(categorizedItems)
+        .map(([category, items]) => `
+            <h4 class="shopping-category">${category}</h4>
+            <ul class="shopping-list">
+                ${items.map(item => `
+                    <li class="shopping-item">
+                        <input type="checkbox" class="ingredient-checkbox" id="${item.id}" checked data-copy-text="${item.copyText}">
+                        <label for="${item.id}">${item.fullText}</label>
+                    </li>
+                `).join('')}
+            </ul>
+        `).join('');
+
+    // Ensure buttons are added only once
+    let buttonContainer = document.getElementById("shopping-list-buttons");
+    if (!buttonContainer) {
+        buttonContainer = document.createElement("div");
+        buttonContainer.id = "shopping-list-buttons";
+        buttonContainer.innerHTML = `
+            <button id="select-all">Select All</button>
+            <button id="clear-all">Clear All</button>
+            <button id="copy-shopping-list">Copy Shopping List</button>
+        `;
+        shoppingListContainer.parentElement.appendChild(buttonContainer);
+    }
+
+    // Event Listeners for buttons
+    document.getElementById("select-all").addEventListener("click", () => {
+        document.querySelectorAll(".ingredient-checkbox").forEach(cb => cb.checked = true);
+    });
+
+    document.getElementById("clear-all").addEventListener("click", () => {
+        document.querySelectorAll(".ingredient-checkbox").forEach(cb => cb.checked = false);
+    });
+
+    document.getElementById("copy-shopping-list").addEventListener("click", () => {
+        const selectedItems = Array.from(document.querySelectorAll(".ingredient-checkbox:checked"))
+            .map(cb => cb.getAttribute("data-copy-text"))
+            .join("\n");
+
+        navigator.clipboard.writeText(selectedItems)
+            .then(() => alert("Shopping list copied to clipboard!"))
+            .catch(err => console.error("Failed to copy shopping list: ", err));
+    });
 }
 
 
+
+document.getElementById("copy-shopping-list").addEventListener("click", function () {
+    const shoppingListContainer = document.getElementById("shopping-list-items");
+
+    // Extract only ingredient names
+    const itemsText = [...shoppingListContainer.querySelectorAll("ul li")]
+        .map(item => cleanIngredientName(item.textContent)) // Process each item
+        .join("\n"); // Join without category titles
+
+    // Copy to clipboard
+    navigator.clipboard.writeText(itemsText)
+        .then(() => alert("Shopping list copied to clipboard!"))
+        .catch(err => console.error("Failed to copy shopping list: ", err));
+});
+
+    // Fix category assignment
+    function categorizeIngredient(name) {
+        let category = "Other"; // Default category
+    
+        for (const [cat, items] of Object.entries(categories)) {
+            if (items.some(item => name.toLowerCase().includes(item))) {
+                category = cat;
+                break;
+            }
+        }
+    
+        return category;
+    }
+
+function copyShoppingList() {
+    const checkedItems = Array.from(document.querySelectorAll(".ingredient-checkbox:checked"))
+        .map(cb => cb.dataset.copyText)
+        .join("\n");
+
+    navigator.clipboard.writeText(checkedItems)
+        .then(() => alert("Shopping list copied to clipboard!"))
+        .catch(err => console.error("Failed to copy shopping list: ", err));
+}
+
+
+function cleanIngredientName(itemText) {
+    // Patterns for removing numbers, measurements, and units
+    const measurementPatterns = [
+        /\b\d+\s?\/\s?\d+\b/,    // Fractions (e.g., "1/2", "1 ½")
+        /\b\d+\.\d+\b/,          // Decimal numbers (e.g., "1.5")
+        /\b\d+\b/,               // Standalone numbers (e.g., "3", "400g")
+        /\bml\b|\blitre\b|\bg\b|\bkg\b|\bcan\b|\bpacket\b|\btablespoon\b|\btsp\b|\btbsp\b|\bcup\b|\bclove\b|\bslice\b|\bfillet\b|\bstick\b|\bpinch\b|\bsprig\b|\bbunch\b|\bx\b|\btablespoons\b|\bteaspoon\b|\bquart\b|\bpound\b|\boz\b/gi
+    ];
+
+    let cleanedText = itemText;
+
+    // Remove measurement words and numbers
+    measurementPatterns.forEach(pattern => {
+        cleanedText = cleanedText.replace(pattern, "").trim();
+    });
+
+    // Fix leftover dots, stray spaces, or unnecessary words
+    cleanedText = cleanedText
+        .replace(/\s{2,}/g, " ")   // Remove extra spaces
+        .replace(/^\.\s?/g, "")    // Remove leading dots
+        .replace(/,\s?$/, "")      // Remove trailing commas
+        .replace(/\bof\b/g, "")    // Remove 'of' (e.g., 'bunch of basil' -> 'basil')
+        .trim();
+
+    return cleanedText;
+}
 
 
 // Edit recipe
@@ -962,33 +1097,18 @@ function editRecipe(index) {
 document.getElementById('edit-recipe-form').addEventListener('submit', function (e) {
     e.preventDefault();
 
-    // Parse ingredients with the updated parsing logic
     const updatedIngredients = document.getElementById('edit-bulk-ingredients').value
         .trim()
         .split('\n')
-        .map(line => {
-            const match = line.match(/^(\d+(?:\/\d+)?(?:\s\d+\/\d+)?)?\s*(tsp|tbsp|g|kg|ml|l|pieces|stick|clove|cup|teaspoon|tablespoon|sprig|no unit)?\s*(.+)$/i);
-            if (match) {
-                const [, quantity, unit, name] = match;
-                return {
-                    name: name.trim(),
-                    quantity: quantity ? parseFraction(quantity.trim()) : 0,
-                    unit: unit ? unit.trim() : '(no unit)',
-                };
-            }
-            return null;
-        })
+        .map(parseIngredientLine)
         .filter(Boolean);
 
-    // Parse instructions as usual
     const updatedInstructions = document.getElementById('edit-bulk-instructions').value
         .trim()
         .split('\n')
         .map(line => line.trim());
 
-        
-        const updatedRating = parseInt(document.getElementById('edit-recipe-rating').value, 10) || 0;
-
+    const updatedRating = parseInt(document.getElementById('edit-recipe-rating').value, 10) || 0;
 
     const updatedRecipe = {
         ...recipes[recipeToEdit], // Retain existing properties
@@ -999,8 +1119,8 @@ document.getElementById('edit-recipe-form').addEventListener('submit', function 
         subCategory: document.getElementById('edit-sub-category').value.trim(),
         ingredients: updatedIngredients,
         instructions: updatedInstructions,
-        rating: isNaN(updatedRating) ? 0 : updatedRating, // Update the rating
-        image: uploadedImage || recipes[recipeToEdit].image, // Retain existing image if not updated
+        rating: isNaN(updatedRating) ? 0 : updatedRating,
+        image: uploadedImage || recipes[recipeToEdit].image,
     };
 
     recipes[recipeToEdit] = updatedRecipe; // Update the recipe in the array
@@ -1009,6 +1129,7 @@ document.getElementById('edit-recipe-form').addEventListener('submit', function 
 
     document.getElementById('edit-recipe-modal').style.display = 'none'; // Close modal
 });
+
 
 
 // Cancel edit
@@ -1223,10 +1344,6 @@ function loadSavedWeek(index) {
 
 
 
-// Display saved weeks on page load
-document.addEventListener("DOMContentLoaded", displaySavedWeeks);
-
-
 // Add event listener for the save button
 document.getElementById("save-week").addEventListener("click", saveCurrentWeek);
 
@@ -1249,8 +1366,6 @@ function randomizeWeeklyRecipes() {
 // Save button event listener
 document.getElementById("save-week").addEventListener("click", saveCurrentWeek);
 
-// Display saved weeks on page load
-document.addEventListener("DOMContentLoaded", displaySavedWeeks);
 
 //document.getElementById('randomize-button').addEventListener('click', randomizeWeeklyRecipes);
 
@@ -1297,64 +1412,87 @@ if (isTouchDevice) {
     });
 }
 
-document.getElementById("download-recipes").addEventListener("click", function () {
-    // Prepare the recipes as a JSON string
-    const dataStr = JSON.stringify(recipes, null, 4);
+document.getElementById('download-recipes').addEventListener('click', () => {
+    // Combine recipes and saved weeks into one object
+    const dataToDownload = {
+        recipes: accounts[currentAccount].recipes || [],
+        savedWeeks: accounts[currentAccount].savedWeeks || [],
+    };
 
-    // Create a Blob and download the file
-    const blob = new Blob([dataStr], { type: "application/json" });
+    // Convert the data to JSON format
+    const dataJSON = JSON.stringify(dataToDownload, null, 2);
+
+    // Create a Blob object and generate a download link
+    const blob = new Blob([dataJSON], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "recipes.json";
-    a.click();
+
+    // Create a download link dynamically
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'recipes_and_weeks.json';
+    link.click();
+
+    // Clean up
     URL.revokeObjectURL(url);
-
-    alert("Recipes have been downloaded as recipes.json!");
 });
 
-document.getElementById("upload-recipes-btn").addEventListener("click", function () {
-    // Trigger file selection dialog
-    document.getElementById("upload-recipes").click();
+document.getElementById('upload-recipes-btn').addEventListener('click', () => {
+    document.getElementById('upload-recipes').click();
 });
 
-document.getElementById("upload-recipes").addEventListener("change", function (event) {
+document.getElementById('upload-recipes').addEventListener('change', (event) => {
     const file = event.target.files[0];
-    if (!file) {
-        alert("No file selected.");
-        return;
-    }
+    if (!file) return;
 
-    // Read the uploaded file
     const reader = new FileReader();
-    reader.onload = function (e) {
+    reader.onload = (e) => {
         try {
-            const uploadedRecipes = JSON.parse(e.target.result);
+            const uploadedData = JSON.parse(e.target.result);
 
-            // Validate the uploaded data
-            if (!Array.isArray(uploadedRecipes)) {
-                throw new Error("Invalid format: expected an array of recipes.");
+            // Validate uploaded data
+            if (uploadedData.recipes && Array.isArray(uploadedData.recipes)) {
+                accounts[currentAccount].recipes = uploadedData.recipes;
+            }
+            if (uploadedData.savedWeeks && Array.isArray(uploadedData.savedWeeks)) {
+                accounts[currentAccount].savedWeeks = uploadedData.savedWeeks;
             }
 
-            // Update the recipes and save them
-            recipes = uploadedRecipes;
-            saveRecipes();
-            displayRecipes(); // Refresh the display
-
-            alert("Recipes have been uploaded successfully!");
-        } catch (error) {
-            alert(`Error uploading recipes: ${error.message}`);
+            saveAccountData(); // Save updated data to localStorage
+            displayRecipes(); // Refresh the recipes display
+            displaySavedWeeks(); // Refresh the saved weeks display
+            alert('Recipes and weekly lists uploaded successfully!');
+        } catch (err) {
+            console.error('Error parsing uploaded file:', err);
+            alert('Invalid file format. Please upload a valid JSON file.');
         }
     };
     reader.readAsText(file);
 });
 
+document.addEventListener("DOMContentLoaded", function () {
+    const mealPlanGrid = document.getElementById("meal-plan-grid");
+    const prevButton = document.getElementById("prev-day");
+    const nextButton = document.getElementById("next-day");
+    
+    let currentIndex = 0;
+    const days = document.querySelectorAll(".day-column");
 
+    function updateButtons() {
+        prevButton.disabled = currentIndex === 0;
+        nextButton.disabled = currentIndex === days.length - 1;
+    }
 
-document.addEventListener("DOMContentLoaded", () => {
-    console.log("DOMContentLoaded event fired"); // Debugging log
-    initializeMealPlanner(); // Call your function here
+    function scrollMealPlan(direction) {
+        currentIndex = Math.min(Math.max(currentIndex + direction, 0), days.length - 1);
+        days[currentIndex].scrollIntoView({ behavior: "smooth", block: "nearest", inline: "start" });
+        updateButtons();
+    }
+
+    updateButtons();
+    window.scrollMealPlan = scrollMealPlan;
 });
+
+
 
 // Display recipes on page load
 displayRecipes();
