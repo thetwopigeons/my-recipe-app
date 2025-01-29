@@ -186,103 +186,154 @@
        <!-- Meal Planner Section -->
        <section id="meal-plan">
         <h2>Weekly Meal Planner</h2>
+
+        <!-- Navigation Buttons for Mobile -->
+        <div class="meal-plan-nav">
+            <button id="prev-day" onclick="scrollMealPlan(-1)">⬅ Previous</button>
+            <button id="next-day" onclick="scrollMealPlan(1)">Next ➡</button>
+        </div>
+
+        <!-- Meal Plan Grid (Scrollable on Mobile) -->
         <div id="meal-plan-grid">
+
             <div class="day-column" id="monday">
                 <h3>Monday</h3>
                 <div class="meal-slot" data-day="monday" data-meal="breakfast">
                     <span class="meal-label">Breakfast</span>
+                    <div class="meal-content"></div>
                 </div>
                 <div class="meal-slot" data-day="monday" data-meal="lunch">
                     <span class="meal-label">Lunch</span>
+                    <div class="meal-content"></div>
                 </div>
                 <div class="meal-slot" data-day="monday" data-meal="dinner">
                     <span class="meal-label">Dinner</span>
+                    <div class="meal-content"></div>
                 </div>
             </div>
+
             <div class="day-column" id="tuesday">
                 <h3>Tuesday</h3>
                 <div class="meal-slot" data-day="tuesday" data-meal="breakfast">
                     <span class="meal-label">Breakfast</span>
+                    <div class="meal-content"></div>
                 </div>
                 <div class="meal-slot" data-day="tuesday" data-meal="lunch">
                     <span class="meal-label">Lunch</span>
+                    <div class="meal-content"></div>
                 </div>
                 <div class="meal-slot" data-day="tuesday" data-meal="dinner">
                     <span class="meal-label">Dinner</span>
+                    <div class="meal-content"></div>
                 </div>
             </div>
+
             <div class="day-column" id="wednesday">
                 <h3>Wednesday</h3>
                 <div class="meal-slot" data-day="wednesday" data-meal="breakfast">
                     <span class="meal-label">Breakfast</span>
+                    <div class="meal-content"></div>
                 </div>
                 <div class="meal-slot" data-day="wednesday" data-meal="lunch">
                     <span class="meal-label">Lunch</span>
+                    <div class="meal-content"></div>
                 </div>
                 <div class="meal-slot" data-day="wednesday" data-meal="dinner">
                     <span class="meal-label">Dinner</span>
+                    <div class="meal-content"></div>
                 </div>
             </div>
+
             <div class="day-column" id="thursday">
                 <h3>Thursday</h3>
                 <div class="meal-slot" data-day="thursday" data-meal="breakfast">
                     <span class="meal-label">Breakfast</span>
+                    <div class="meal-content"></div>
                 </div>
                 <div class="meal-slot" data-day="thursday" data-meal="lunch">
                     <span class="meal-label">Lunch</span>
+                    <div class="meal-content"></div>
                 </div>
                 <div class="meal-slot" data-day="thursday" data-meal="dinner">
                     <span class="meal-label">Dinner</span>
+                    <div class="meal-content"></div>
                 </div>
             </div>
+
             <div class="day-column" id="friday">
                 <h3>Friday</h3>
                 <div class="meal-slot" data-day="friday" data-meal="breakfast">
                     <span class="meal-label">Breakfast</span>
+                    <div class="meal-content"></div>
                 </div>
                 <div class="meal-slot" data-day="friday" data-meal="lunch">
                     <span class="meal-label">Lunch</span>
+                    <div class="meal-content"></div>
                 </div>
                 <div class="meal-slot" data-day="friday" data-meal="dinner">
                     <span class="meal-label">Dinner</span>
+                    <div class="meal-content"></div>
                 </div>
             </div>
+
             <div class="day-column" id="saturday">
                 <h3>Saturday</h3>
                 <div class="meal-slot" data-day="saturday" data-meal="breakfast">
                     <span class="meal-label">Breakfast</span>
+                    <div class="meal-content"></div>
                 </div>
                 <div class="meal-slot" data-day="saturday" data-meal="lunch">
                     <span class="meal-label">Lunch</span>
+                    <div class="meal-content"></div>
                 </div>
                 <div class="meal-slot" data-day="saturday" data-meal="dinner">
                     <span class="meal-label">Dinner</span>
+                    <div class="meal-content"></div>
                 </div>
             </div>
+
             <div class="day-column" id="sunday">
                 <h3>Sunday</h3>
                 <div class="meal-slot" data-day="sunday" data-meal="breakfast">
                     <span class="meal-label">Breakfast</span>
+                    <div class="meal-content"></div>
                 </div>
                 <div class="meal-slot" data-day="sunday" data-meal="lunch">
                     <span class="meal-label">Lunch</span>
+                    <div class="meal-content"></div>
                 </div>
                 <div class="meal-slot" data-day="sunday" data-meal="dinner">
                     <span class="meal-label">Dinner</span>
+                    <div class="meal-content"></div>
                 </div>
             </div>
-        </div>
+
+        </div> <!-- End of meal-plan-grid -->
+
     </section>
     
     <section id="weekly-list-section">
         <div id="weekly-tabs" style="margin-bottom: 20px;">
             <!-- Weekly recipe tabs will be dynamically populated here -->
         </div>
-        
+    
+        <!-- Make sure this section is PRESENT inside weekly-list-section -->
         <div id="weekly-details" style="display: none; border: 1px solid #ccc; padding: 20px; background-color: #f9f9f9;">
-            <button id="close-weekly-details" style="float: right; margin-bottom: 10px;">Close</button>
-            <div id="weekly-details-content"></div> <!-- Container for dynamic content -->
+            <button id="close-weekly-details" onclick="closeRecipeDetails()" style="float: right; margin-bottom: 10px;">Close</button>
+            <div id="recipe-details-content">
+                <!-- Recipe details will be inserted here -->
+            </div>
         </div>
+
+        <!-- Recipe Details Section -->
+<section id="recipe-details" style="display: none; border: 1px solid #ccc; padding: 20px; background-color: #f9f9f9;">
+    <h2>Recipe Details</h2>
+    <button id="close-recipe-details" onclick="closeRecipeDetails()" style="float: right; margin-bottom: 10px;">Close</button>
+    <div id="recipe-details-content">
+        <!-- Recipe details will be inserted here dynamically -->
+    </div>
+</section>
+
     
         <button id="clear-weekly-list" style="background-color: red; color: white; margin-top: 20px;">Clear Weekly List</button>
     
@@ -297,7 +348,12 @@
         <div id="weeks-list"></div>
     
         <h3>Shopping List</h3>
-        <div id="shopping-list-items"></div>
+        <div class="shopping-list-container">
+            <div id="shopping-list-items">
+                <p id="empty-shopping-list" style="text-align: center; color: #999;">Your shopping list is empty.</p>
+            </div>
+            <button id="copy-shopping-list">Copy Shopping List</button>
+        </div>
     </section>
 
         <!-- Edit Recipe Modal -->
