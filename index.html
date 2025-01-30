@@ -5,42 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Recipe Manager</title>
     <link rel="stylesheet" href="styles.css">
-    <!-- Firebase SDK -->
-
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
-        import { getFirestore } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
-        import { getAuth } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
-    
-        const firebaseConfig = {
-            apiKey: "AIzaSyAFIcmg7ImIqZqwPfnsT1VwgpcsZxazGZA",
-            authDomain: "meal-planner-ade82.firebaseapp.com",
-            projectId: "meal-planner-ade82",
-            storageBucket: "meal-planner-ade82.appspot.com",
-            messagingSenderId: "857392137454",
-            appId: "1:857392137454:web:ba25dc15fa4625c9165fff",
-            measurementId: "G-VM2FFLV3KD"
-        };
-    
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const auth = getAuth(app);
-    </script>
-    
 </head>
 <body>
     <header>
         <h1>Meal Planner</h1>
-
-        <section id="auth-section">
-            <h2>User Authentication</h2>
-            <input type="email" id="email" placeholder="Email">
-            <input type="password" id="password" placeholder="Password">
-            <button onclick="signUp()">Sign Up</button>
-            <button onclick="login()">Login</button>
-            <button onclick="logout()">Logout</button>
-        </section>
-        
+        <div id="account-section">
+            Logged in as: <span id="current-account">default</span>
+            <button id="switch-account-button">Switch Account</button>
+        </div>
     </header>
     <main>
         <!-- Button to Show/Hide Add New Recipe Section -->
@@ -375,14 +347,27 @@
             <h2>Save Week</h2>
             <label for="week-name">Week Name:</label>
             <input type="text" id="week-name" placeholder="Enter a name for this week" style="margin-bottom: 10px;">
-            <button id="save-week" onclick="saveCurrentWeek()" style="margin-top: 10px;">Save Week</button>
+            <button id="save-week" style="margin-top: 10px;">Save Week</button>
         </section>
         
-        <section id="saved-weeks-section">
-            <h2>Saved Weeks</h2>
-            <div id="weeks-list"></div>
-        </section>
+        <h2>Saved Weeks</h2>
+        <div id="weeks-list"></div>
     
+        <section id="recipe-management">
+            <h2>Manage Recipes</h2>
+        
+            <!-- Download Recipes Button -->
+            <button id="download-recipes">Download Recipes</button>
+        
+            <!-- Hidden File Input for Uploading Recipes -->
+            <input type="file" id="upload-recipes" style="display: none;" accept=".json">
+        
+            <!-- Visible Button to Trigger File Upload -->
+            <button id="upload-recipes-btn">Upload Recipes</button>
+        
+            <p id="upload-status" style="color: red;"></p> <!-- Display errors/status messages here -->
+        </section>
+        
         <h3>Shopping List</h3>
         <div class="shopping-list-container">
             <div id="shopping-list-items">
@@ -518,9 +503,8 @@
         <!-- Clear All Recipes Button -->
         <button id="clear-recipes-button" style="background-color: red; color: white; margin-top: 1rem;">Clear All Recipes</button>
 
-        <button id="download-recipes">Download Recipes</button>
-<input type="file" id="upload-recipes" style="display: none;" accept=".json">
-<button id="upload-recipes-btn">Upload Recipes</button>
+
+        
 
     </main>
     <script src="scripts.js"></script>
