@@ -518,13 +518,93 @@ textarea {
     color: #666;
 }
 
-.recipe-card .button-group {
+.button-group {
     display: flex;
-    justify-content: center;
-    gap: 4px;
-    margin-top: 8px;
+    flex-wrap: wrap; /* Allows buttons to wrap inside the card */
+    gap: 5px; /* Small spacing between buttons */
+    justify-content: center; /* Centers buttons inside the card */
+    padding: 5px 0; /* Adds padding to prevent overlap */
 }
 
+.button-group button {
+    flex: 1; /* Makes all buttons equal width */
+    min-width: 60px; /* Ensures buttons don’t get too small */
+    padding: 6px 10px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+}
+
+
+/* Ensure the modal is visible and can scroll */
+#edit-recipe-modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5); /* Background overlay */
+    overflow: hidden; /* Prevent full body scroll */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Make modal content scrollable while keeping form fields usable */
+#edit-recipe-modal .modal-content {
+    max-height: 80vh;  /* Limit height to 80% of viewport */
+    width: 90%;
+    max-width: 500px;
+    overflow-y: auto;  /* Enable vertical scrolling */
+    background-color: white;
+    padding: 20px;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Allow form fields to expand normally */
+#edit-recipe-modal form {
+    flex-grow: 1;  /* Allow it to take up available space */
+    overflow-y: auto;  /* Keep the form scrollable */
+}
+
+/* Keep textareas large and expandable */
+#edit-recipe-modal textarea {
+    min-height: 150px;  /* Set a reasonable default height */
+    max-height: 400px;  /* Allow it to expand */
+    resize: vertical;   /* Allow manual resizing */
+    width: 100%;
+}
+
+
+/* 🎨 Styling for specific buttons */
+.add { background-color: #4CAF50; color: white; } /* Green */
+.edit { background-color: #2196F3; color: white; } /* Blue */
+.delete { background-color: #f44336; color: white; } /* Red */
+.copy { background-color: #ff9800; color: white; } /* Orange */
+
+/* 🔥 Button hover effects */
+.button-group button:hover {
+    opacity: 0.8;
+    transform: scale(1.05); /* Slight pop effect */
+}
+
+/* 📱 Mobile-friendly tweaks */
+@media (max-width: 480px) {
+    .button-group {
+        flex-direction: column; /* Stack buttons vertically on small screens */
+        align-items: center;
+    }
+
+    .button-group button {
+        width: 100%; /* Full width on small screens */
+    }
+}
 .recipe-card button {
     padding: 2px;
     font-size: 0.7rem;
