@@ -1,3 +1,53 @@
+// Initialize Firebase
+const firebaseConfig = {
+    apiKey: "AIzaSyAFIcmg7ImIqZqwPfnsT1VwgpcsZxazGZA",
+    authDomain: "meal-planner-ade82.firebaseapp.com",
+    projectId: "meal-planner-ade82",
+    storageBucket: "meal-planner-ade82.appspot.com",
+    messagingSenderId: "857392137454",
+    appId: "1:857392137454:web:ba25dc15fa4625c9165fff",
+    measurementId: "G-VM2FFLV3KD"
+};
+
+// Initialize Firebase App
+firebase.initializeApp(firebaseConfig);
+
+// Reference Firestore database
+const db = firebase.firestore();
+
+// Reference Firebase Authentication
+const auth = firebase.auth();
+
+function signUp(email, password) {
+    auth.createUserWithEmailAndPassword(email, password)
+        .then((userCredential) => {
+            const user = userCredential.user;
+            console.log("✅ User created:", user.uid);
+            saveUserToFirestore(user.uid, email);
+        })
+        .catch(error => console.error("❌ Signup error:", error.message));
+}
+
+function login(email, password) {
+    auth.signInWithEmailAndPassword(email, password)
+        .then((userCredential) => {
+            const user = userCredential.user;
+            console.log("✅ Logged in as:", user.uid);
+            loadUserData(user.uid);
+        })
+        .catch(error => console.error("❌ Login error:", error.message));
+}
+
+auth.onAuthStateChanged(user => {
+    if (user) {
+        console.log("✅ User logged in:", user.uid);
+        loadUserData(user.uid);
+    } else {
+        console.log("❌ No user logged in.");
+    }
+});
+
+
 // Initialize accounts in localStorage
 let accounts = JSON.parse(localStorage.getItem('accounts')) || {
     default: {
@@ -57,23 +107,54 @@ function switchAccount(accountName) {
 
 // Function to load recipes and weekly recipes for the current account
 function loadAccountData() {
-    recipes = accounts[currentAccount].recipes || [];
-    weeklyRecipes = accounts[currentAccount].weeklyRecipes || [];
-    displayRecipes();
-    displayWeeklyRecipes();
+    if (!auth.currentUser) return;
+
+    const userId = auth.currentUser.uid;
+    db.collection("users").doc(userId).get()
+        .then((doc) => {
+            if (doc.exists) {
+                recipes = doc.data().recipes || [];
+                displayRecipes(); // Refresh UI
+                console.log("✅ Recipes loaded from Firestore");
+            } else {
+                console.log("⚠ No recipes found in Firestore");
+            }
+        })
+        .catch(error => console.error("❌ Error loading recipes:", error));
 }
+
 
 // Function to save recipes to the current account
 function saveRecipes() {
-    accounts[currentAccount].recipes = recipes;
-    saveAccountData();
+    if (!auth.currentUser) return;
+
+    const userId = auth.currentUser.uid;
+    db.collection("users").doc(userId).set({ recipes })
+        .then(() => console.log("✅ Recipes saved to Firestore"))
+        .catch(error => console.error("❌ Error saving recipes:", error));
 }
+
 
 // Function to save weekly recipes to the current account
 function saveWeeklyRecipes() {
-    accounts[currentAccount].weeklyRecipes = weeklyRecipes;
-    saveAccountData();
+    if (!auth.currentUser) return;
+
+    const userId = auth.currentUser.uid;
+    db.collection("users").doc(userId).update({ weeklyRecipes })
+        .then(() => console.log("✅ Weekly recipes saved to Firestore"))
+        .catch(error => console.error("❌ Error saving weekly recipes:", error));
 }
+
+function saveWeeklyRecipes() {
+    if (!auth.currentUser) return;
+
+    const userId = auth.currentUser.uid;
+    db.collection("users").doc(userId).update({ weeklyRecipes })
+        .then(() => console.log("✅ Weekly recipes saved to Firestore"))
+        .catch(error => console.error("❌ Error saving weekly recipes:", error));
+}
+
+
 
 // On page load, load the default account's data
 document.addEventListener('DOMContentLoaded', () => {
@@ -102,31 +183,36 @@ function displaySearchResults(matchingRecipes, isTextSearch) {
     searchResults.style.display = 'block';
     resultsContainer.innerHTML = ''; // Clear previous results
 
-    // Create recipe cards for each matching recipe
     matchingRecipes.forEach(recipe => {
+        const recipeIndex = recipes.indexOf(recipe);
+
         const recipeCard = document.createElement('div');
         recipeCard.className = 'recipe-card';
         recipeCard.setAttribute('draggable', 'true');
-        recipeCard.setAttribute('data-recipe-index', recipes.indexOf(recipe));
+        recipeCard.setAttribute('data-recipe-index', recipeIndex);
         recipeCard.addEventListener('dragstart', handleDragStart);
 
         recipeCard.innerHTML = `
-            <h4>${recipe.name}</h4>
-            <p>${recipe.time}, ${recipe.glutenOption}</p>
-            <p>${recipe.mainCategory}, ${recipe.subCategory}</p>
-            <p class="stars">${'⭐'.repeat(recipe.rating)}</p>
-        `;
+        ${recipe.image ? `<img src="${recipe.image}" alt="${recipe.name}" class="recipe-img">` : ""}
+        <h4>${recipe.name}</h4>
+        <p>${recipe.time}, ${recipe.glutenOption}</p>
+        <p>${recipe.subCategory}</p>
+        <p class="stars">${'⭐'.repeat(recipe.rating)}</p>
+        ${recipe.tags && recipe.tags.length ? `<p class="tags">Tags: ${recipe.tags.join(', ')}</p>` : ""}
+        <div class="button-group">
+            <button onclick="openMealPlanModal(${recipes.indexOf(recipe)})" class="add">Add</button>
+            <button onclick="editRecipe(${recipes.indexOf(recipe)})" class="edit">Edit</button>
+            <button onclick="deleteRecipe(${recipes.indexOf(recipe)})" class="delete">Delete</button>
+            <button onclick="copyRecipe(${recipes.indexOf(recipe)})" class="copy">Copy</button>
+        </div>
+    `;
 
         resultsContainer.appendChild(recipeCard);
     });
 
-    console.log(
-        isTextSearch
-            ? "Results from text search:"
-            : "Results from filters:",
-        matchingRecipes
-    );
+    console.log(isTextSearch ? "Results from text search:" : "Results from filters:", matchingRecipes);
 }
+
 
 // Function to handle search
 function handleSearch(event) {
@@ -159,12 +245,25 @@ function clearSearchResults() {
     resultsContainer.innerHTML = ''; // Clear the results
 }
 
+// Function to handle tag search dynamically
+function handleTagSearch(event) {
+    const searchTag = event.target.value.trim().toLowerCase(); // Get input value
 
+    if (!searchTag) {
+        clearSearchResults(); // If input is empty, clear results
+        return;
+    }
 
-function saveRecipes() {
-    accounts[currentAccount].recipes = recipes;
-    saveAccountData();
+    const matchingRecipes = recipes.filter(recipe =>
+        recipe.tags && recipe.tags.some(tag => tag.toLowerCase().includes(searchTag))
+    );
+
+    displaySearchResults(matchingRecipes, false); // Pass 'false' to indicate it's a tag filter
 }
+
+// Attach event listener to the tag search input
+document.getElementById('tag-filter').addEventListener('input', handleTagSearch);
+
 
 // Temporary storage for ingredients, instructions, and image
 let tempIngredients = [];
@@ -410,6 +509,7 @@ function initializeMealPlanner() {
 function handleDrop(event, day, meal) {
     console.log(`Dropped on: ${day} - ${meal}`); // Debugging
     event.preventDefault();
+
     try {
         const data = event.dataTransfer.getData("application/json");
         console.log("Dropped data:", data); // Debugging
@@ -430,25 +530,40 @@ function handleDrop(event, day, meal) {
             return;
         }
 
-        // Find the current slot that holds this recipe (if any)
-        const existingSlot = document.querySelector(`.meal-item[data-recipe-index="${recipeIndex}"]`);
-        if (existingSlot) {
-            existingSlot.parentElement.innerHTML = existingSlot.parentElement.dataset.meal.charAt(0).toUpperCase() +
-                existingSlot.parentElement.dataset.meal.slice(1);
+        // **Remove the recipe from any existing slot** to prevent duplicates
+        Object.keys(accounts[currentAccount].mealPlan).forEach(existingDay => {
+            Object.keys(accounts[currentAccount].mealPlan[existingDay]).forEach(existingMeal => {
+                if (accounts[currentAccount].mealPlan[existingDay][existingMeal]?.name === recipe.name) {
+                    accounts[currentAccount].mealPlan[existingDay][existingMeal] = null;
+
+                    // **Clear the previous UI slot**
+                    const oldSlot = document.querySelector(`.meal-slot[data-day="${existingDay}"][data-meal="${existingMeal}"]`);
+                    if (oldSlot) {
+                        oldSlot.innerHTML = `<span class="meal-label">${existingMeal.charAt(0).toUpperCase() + existingMeal.slice(1)}</span>`;
+                    }
+                }
+            });
+        });
+
+        // **Save the recipe to the new slot**
+        accounts[currentAccount].mealPlan[day][meal] = recipe;
+        saveAccountData();
+
+        // **Update the UI for the new slot**
+        const slot = document.querySelector(`.meal-slot[data-day="${day}"][data-meal="${meal}"]`);
+        if (slot) {
+            slot.innerHTML = `
+                <div class="meal-item" draggable="true" data-recipe-index="${recipeIndex}" ondragstart="handleDragStart(event)">
+                    <h4 class="recipe-title">${recipe.name}</h4>
+                    <button class="show-recipe-button" onclick="showRecipeDetails(${recipeIndex})">Show Recipe</button>
+                    <button class="remove-recipe-button" onclick="removeFromMealPlan('${day}', '${meal}')">Remove</button>
+                </div>
+            `;
         }
 
-        // Add the recipe to the new slot
-        const slot = document.querySelector(`.meal-slot[data-day="${day}"][data-meal="${meal}"]`);
-        slot.innerHTML = `
-             <div class="meal-item" draggable="true" data-recipe-index="${recipeIndex}" ondragstart="handleDragStart(event)">
-                <h4 class="recipe-title">${recipe.name}</h4>
-                <button class="show-recipe-button" onclick="showRecipeDetails(${recipeIndex})">Show Recipe</button>
-                <button class="remove-recipe-button" onclick="removeFromMealPlan('${day}', '${meal}')">Remove</button>
-            </div>
-        `;
-
-        saveToMealPlan(day, meal, recipe);
-        displayShoppingList();
+        saveMealPlan(); // 🔥 **Add this here**
+        updateMealPlannerUI();
+        displayShoppingList(); // **Ensure shopping list updates**
     } catch (error) {
         console.error("Error handling drop:", error);
     }
@@ -464,22 +579,21 @@ function handleDragOver(event) {
 
 function handleDragStart(event) {
     console.log("Drag started:", event.target); // Debugging
-    const mealItem = event.target.closest(".meal-item, .recipe-card"); // Ensure this targets the correct element
+    const mealItem = event.target.closest(".meal-item, .recipe-card"); 
     if (!mealItem) {
         console.error("Drag start initiated on an invalid element:", event.target);
         return;
     }
 
-    const recipeIndex = mealItem.dataset.recipeIndex; // Ensure this attribute exists
+    const recipeIndex = mealItem.dataset.recipeIndex;
     if (!recipeIndex) {
         console.error("Recipe index is missing in drag event target:", mealItem);
         return;
     }
 
-    const data = JSON.stringify({ recipeIndex }); // Serialize the recipe index for transfer
+    const data = JSON.stringify({ recipeIndex });
     event.dataTransfer.setData("application/json", data);
-    console.log("Drag start data set:", data);
-    mealItem.style.opacity = "0.5"; // Visual feedback
+    event.target.style.opacity = "0.5";
 }
 
 
@@ -497,7 +611,7 @@ function saveToMealPlan(day, meal, recipe) {
         };
     }
 
-    // Clear the recipe from all other slots
+    // Remove recipe from any existing slot to prevent duplicates
     Object.keys(accounts[currentAccount].mealPlan).forEach(existingDay => {
         Object.keys(accounts[currentAccount].mealPlan[existingDay]).forEach(existingMeal => {
             if (accounts[currentAccount].mealPlan[existingDay][existingMeal]?.name === recipe.name) {
@@ -509,7 +623,26 @@ function saveToMealPlan(day, meal, recipe) {
     // Assign the recipe to the new slot
     accounts[currentAccount].mealPlan[day][meal] = recipe;
     saveAccountData();
+
+    // **Ensure the UI Updates Instantly**
+    updateMealSlot(day, meal, recipe);
 }
+
+// **🛠 Function to Update Meal Slots Dynamically**
+function updateMealSlot(day, meal, recipe) {
+    const slot = document.querySelector(`.meal-slot[data-day="${day}"][data-meal="${meal}"]`);
+    if (slot) {
+        slot.innerHTML = `
+            <div class="meal-item" draggable="true" data-recipe-index="${recipes.indexOf(recipe)}" ondragstart="handleDragStart(event)">
+                <h4 class="recipe-title">${recipe.name}</h4>
+                <button class="show-recipe-button" onclick="showRecipeDetails(${recipes.indexOf(recipe)})">Show Recipe</button>
+                <button class="remove-recipe-button" onclick="removeFromMealPlan('${day}', '${meal}')">Remove</button>
+            </div>
+        `;
+    }
+    displayShoppingList(); // Ensure shopping list updates
+}
+
 
 // Function to remove a recipe from the meal plan
 function removeFromMealPlan(day, meal) {
@@ -517,54 +650,83 @@ function removeFromMealPlan(day, meal) {
 
     accounts[currentAccount].mealPlan[day][meal] = null;
     saveAccountData();
+    saveMealPlan(); // 🔥 **Add this here**
 
     const slot = document.querySelector(`.meal-slot[data-day="${day}"][data-meal="${meal}"]`);
     slot.innerHTML = meal.charAt(0).toUpperCase() + meal.slice(1);
     displayShoppingList();
 }
 
+function saveMealPlan() {
+    if (!auth.currentUser) return;
+
+    const userId = auth.currentUser.uid;
+    db.collection("users").doc(userId).update({
+        mealPlan: accounts[currentAccount].mealPlan
+    }).then(() => console.log("✅ Meal plan saved to Firestore"))
+    .catch(error => console.error("❌ Error saving meal plan:", error));
+}
+
 
 function loadMealPlan() {
-    const allSlots = document.querySelectorAll('.meal-slot');
+    if (!auth.currentUser) return;
 
-    // Reset all slots to just their category labels
-    allSlots.forEach(slot => {
-        const mealType = slot.dataset.meal;
-        slot.innerHTML = `<span class="meal-label">${mealType.charAt(0).toUpperCase() + mealType.slice(1)}</span>`;
-    });
+    const userId = auth.currentUser.uid;
 
-    const mealPlan = accounts[currentAccount].mealPlan || {
-        monday: { breakfast: null, lunch: null, dinner: null },
-        tuesday: { breakfast: null, lunch: null, dinner: null },
-        wednesday: { breakfast: null, lunch: null, dinner: null },
-        thursday: { breakfast: null, lunch: null, dinner: null },
-        friday: { breakfast: null, lunch: null, dinner: null },
-        saturday: { breakfast: null, lunch: null, dinner: null },
-        sunday: { breakfast: null, lunch: null, dinner: null },
-    };
-
-    // Loop through each day's meal slots and re-add the recipe card with buttons
-    Object.keys(mealPlan).forEach(day => {
-        Object.keys(mealPlan[day]).forEach(meal => {
-            const recipe = mealPlan[day][meal];
-            const slot = document.querySelector(`.meal-slot[data-day="${day}"][data-meal="${meal}"]`);
-
-            if (recipe && slot) {
-                const recipeIndex = recipes.findIndex(r => r.name === recipe.name);
-                if (recipeIndex === -1) return; // Skip if the recipe isn't found
-
-                slot.innerHTML = `
-                    <div class="meal-item" draggable="true" data-recipe-index="${recipeIndex}" ondragstart="handleDragStart(event)">
-                        <h4 class="recipe-title">${recipe.name}</h4>
-                        <button class="show-recipe-button" onclick="showRecipeDetails(${recipeIndex})">Show Recipe</button>
-                        <button class="remove-recipe-button" onclick="removeFromMealPlan('${day}', '${meal}')">Remove</button>
-                    </div>
-                `;
+    db.collection("users").doc(userId).get()
+        .then((doc) => {
+            if (doc.exists && doc.data().mealPlan) {
+                accounts[currentAccount].mealPlan = doc.data().mealPlan;
+            } else {
+                console.warn("No meal plan found in Firestore, loading default.");
+                accounts[currentAccount].mealPlan = {
+                    monday: { breakfast: null, lunch: null, dinner: null },
+                    tuesday: { breakfast: null, lunch: null, dinner: null },
+                    wednesday: { breakfast: null, lunch: null, dinner: null },
+                    thursday: { breakfast: null, lunch: null, dinner: null },
+                    friday: { breakfast: null, lunch: null, dinner: null },
+                    saturday: { breakfast: null, lunch: null, dinner: null },
+                    sunday: { breakfast: null, lunch: null, dinner: null },
+                };
             }
-        });
-    });
 
-    console.log("Meal plan loaded successfully.");
+            const allSlots = document.querySelectorAll('.meal-slot');
+
+            // Reset all slots to just their category labels
+            allSlots.forEach(slot => {
+                const mealType = slot.dataset.meal;
+                slot.innerHTML = `<span class="meal-label">${mealType.charAt(0).toUpperCase() + mealType.slice(1)}</span>`;
+            });
+
+            // Loop through each day's meal slots and re-add the recipe card with buttons
+            Object.keys(accounts[currentAccount].mealPlan).forEach(day => {
+                Object.keys(accounts[currentAccount].mealPlan[day]).forEach(meal => {
+                    const recipe = accounts[currentAccount].mealPlan[day][meal];
+                    const slot = document.querySelector(`.meal-slot[data-day="${day}"][data-meal="${meal}"]`);
+
+                    if (recipe && slot) {
+                        // Find the recipe index in the global recipes array
+                        const recipeIndex = recipes.findIndex(r => r.name === recipe.name);
+
+                        if (recipeIndex === -1) {
+                            console.warn(`Recipe "${recipe.name}" not found in the global list.`);
+                            return;
+                        }
+
+                        slot.innerHTML = `
+                            <div class="meal-item" draggable="true" data-recipe-index="${recipeIndex}" ondragstart="handleDragStart(event)">
+                                <h4 class="recipe-title">${recipe.name}</h4>
+                                <button class="show-recipe-button" onclick="showRecipeDetails(${recipeIndex})">Show Recipe</button>
+                                <button class="remove-recipe-button" onclick="removeFromMealPlan('${day}', '${meal}')">Remove</button>
+                            </div>
+                        `;
+                    }
+                });
+            });
+
+            console.log("✅ Meal plan loaded successfully from Firestore.");
+        })
+        .catch(error => console.error("❌ Error loading meal plan from Firestore:", error));
 }
 
 
@@ -578,6 +740,9 @@ document.getElementById('recipe-form').addEventListener('submit', function (e) {
     const glutenOption = document.getElementById('gluten-option').value;
     const mainCategory = document.getElementById('main-category').value;
     const subCategory = document.getElementById('sub-category').value;
+    
+    // ✅ Get selected tags
+    const selectedTags = [...document.querySelectorAll('#add-tags-container .tag.selected')].map(tag => tag.dataset.tag);
 
     const recipe = {
         name,
@@ -589,6 +754,7 @@ document.getElementById('recipe-form').addEventListener('submit', function (e) {
         instructions: [...tempInstructions],
         image: uploadedImage,
         rating: 0, // Initial star rating
+        tags: selectedTags // ✅ Save selected tags
     };
 
     recipes.push(recipe);
@@ -606,6 +772,41 @@ document.getElementById('recipe-form').addEventListener('submit', function (e) {
     updateInstructionList();
     closeModal('add-recipe-modal'); // Close modal after saving
 });
+
+// ✅ Ensure tag selection works in the "Add Recipe" form
+function setupAddRecipeTagSelection() {
+    document.querySelectorAll('#add-tags-container .tag').forEach(tag => {
+        tag.addEventListener('click', function () {
+            this.classList.toggle('selected'); // ✅ Toggle selection
+            updateAddRecipeSelectedTagsDisplay();
+        });
+    });
+}
+
+// ✅ Function to update selected tags visually in "Add Recipe"
+function updateAddRecipeSelectedTagsDisplay() {
+    const selectedTagsContainer = document.getElementById('selected-tags');
+    selectedTagsContainer.innerHTML = ''; // Clear previous selection
+
+    document.querySelectorAll('#add-tags-container .tag.selected').forEach(tag => {
+        const selectedTag = document.createElement('span');
+        selectedTag.className = 'selected-tag';
+        selectedTag.textContent = tag.dataset.tag;
+        selectedTag.dataset.tag = tag.dataset.tag;
+
+        // ✅ Allow deselection by clicking the selected tag
+        selectedTag.addEventListener('click', function () {
+            selectedTag.remove(); // Remove from UI
+            document.querySelector(`#add-tags-container .tag[data-tag="${tag.dataset.tag}"]`).classList.remove('selected'); // ✅ Unselect tag
+        });
+
+        selectedTagsContainer.appendChild(selectedTag);
+    });
+}
+
+// ✅ Call the function when the page loads
+setupAddRecipeTagSelection();
+
 
 // Display recipes grouped by categories
 function displayRecipes() {
@@ -653,18 +854,21 @@ function displayRecipes() {
             card.addEventListener("dragend", handleDragEnd);
 
             card.innerHTML = `
-                ${recipe.image ? `<img src="${recipe.image}" alt="${recipe.name}" class="recipe-img">` : ""}
-                <h4>${recipe.name}</h4>
-                <p>${recipe.time}, ${recipe.glutenOption}</p>
-                <p>${recipe.subCategory}</p>
-                <p class="stars">${'⭐'.repeat(recipe.rating)}</p>
-                <div class="button-group">
-                    <button onclick="addToWeeklyList(${recipes.indexOf(recipe)})" class="add">Add</button>
-                    <button onclick="editRecipe(${recipes.indexOf(recipe)})" class="edit">Edit</button>
-                    <button onclick="deleteRecipe(${recipes.indexOf(recipe)})" class="delete">Delete</button>
-                    <button onclick="copyRecipe(${recipes.indexOf(recipe)})" class="copy">Copy</button>
-                </div>
-            `;
+            ${recipe.image ? `<img src="${recipe.image}" alt="${recipe.name}" class="recipe-img">` : ""}
+            <h4>${recipe.name}</h4>
+            <p>${recipe.time}, ${recipe.glutenOption}</p>
+            <p>${recipe.subCategory}</p>
+            <p class="stars">${'⭐'.repeat(recipe.rating)}</p>
+            ${recipe.tags && recipe.tags.length ? `<p class="tags">Tags: ${recipe.tags.join(', ')}</p>` : ""}
+            
+            <div class="button-group">
+                <button onclick="openMealPlanModal(${recipes.indexOf(recipe)})" class="add">Add</button>
+                <button onclick="editRecipe(${recipes.indexOf(recipe)})" class="edit">Edit</button>
+                <button onclick="deleteRecipe(${recipes.indexOf(recipe)})" class="delete">Delete</button>
+                <button onclick="copyRecipe(${recipes.indexOf(recipe)})" class="copy">Copy</button>
+            </div>
+        `;
+        
 
             content.appendChild(card);
         });
@@ -707,23 +911,6 @@ function copyRecipe(index) {
 }
 
 
-
-function addToWeeklyList(index) {
-    if (weeklyRecipes.length >= 3) {
-        alert('You can only add up to 3 recipes to your weekly list.');
-        return;
-    }
-
-    const recipe = recipes[index];
-    if (!weeklyRecipes.includes(recipe)) {
-        weeklyRecipes.push(recipe);
-        saveWeeklyRecipes(); // Save the updated list to localStorage
-        displayWeeklyRecipes();
-        displayShoppingList(); // Update the shopping list
-    } else {
-        alert('This recipe is already in your weekly list.');
-    }
-}
 
 function displayWeeklyRecipes() {
     const weeklyRecipes = accounts[currentAccount]?.weeklyRecipes || [];
@@ -793,6 +980,7 @@ function removeFromWeeklyList(index) {
     if (confirm(`Are you sure you want to remove "${weeklyRecipes[index].name}" from the weekly list?`)) {
         weeklyRecipes.splice(index, 1); // Remove the recipe
         saveAccountData(); // Save updated data
+        saveWeeklyRecipes(); // 🔥 **Add this here**
         displayWeeklyRecipes(); // Refresh UI
     }
 }
@@ -969,7 +1157,6 @@ function displayShoppingList() {
         buttonContainer.innerHTML = `
             <button id="select-all">Select All</button>
             <button id="clear-all">Clear All</button>
-            <button id="copy-shopping-list">Copy Shopping List</button>
         `;
         shoppingListContainer.parentElement.appendChild(buttonContainer);
     }
@@ -1062,27 +1249,41 @@ function cleanIngredientName(itemText) {
     return cleanedText;
 }
 
-
 // Edit recipe
 function editRecipe(index) {
     recipeToEdit = index;
     const recipe = recipes[index];
 
-    // Populate fields with existing recipe data
+    // ✅ Populate fields with existing recipe data
     document.getElementById('edit-recipe-name').value = recipe.name;
     document.getElementById('edit-recipe-time').value = recipe.time;
     document.getElementById('edit-gluten-option').value = recipe.glutenOption;
     document.getElementById('edit-main-category').value = recipe.mainCategory;
     document.getElementById('edit-sub-category').value = recipe.subCategory;
 
-    // Format ingredients for the bulk textarea
+    // ✅ Reset selected tags visually & clear previous selection
+    const allTags = document.querySelectorAll('#edit-tags-container .tag');
+    const selectedTagsContainer = document.getElementById('edit-selected-tags');
+    selectedTagsContainer.innerHTML = ''; // Clear existing selected tags
+
+    allTags.forEach(tag => {
+        tag.classList.remove('selected'); // Reset all tags
+        if (recipe.tags && recipe.tags.includes(tag.dataset.tag)) {
+            tag.classList.add('selected'); // Highlight selected tags
+        }
+    });
+
+    // ✅ Ensure tag selection is interactive & responsive
+    setupEditTagSelection();
+
+    // ✅ Format ingredients & instructions for bulk textareas
     document.getElementById('edit-bulk-ingredients').value = recipe.ingredients
-        .map(ing => `${ing.quantity ? `${ing.quantity} ` : ''}${ing.unit !== '(no unit)' ? `${ing.unit} ` : ''}${ing.name}`)
+        .map(ing => `${ing.quantity ? `${ing.quantity} ` : ''}${ing.unit !== '(no unit)' ? `${ing.unit} ` : ''}${ing.name}`.trim())
         .join('\n');
 
-    // Format instructions for the bulk textarea
     document.getElementById('edit-bulk-instructions').value = recipe.instructions.join('\n');
 
+    // ✅ Handle image preview
     if (recipe.image) {
         document.getElementById('edit-image-preview').src = recipe.image;
         document.getElementById('edit-image-preview').style.display = 'block';
@@ -1090,10 +1291,59 @@ function editRecipe(index) {
         document.getElementById('edit-image-preview').style.display = 'none';
     }
 
-    document.getElementById('edit-recipe-modal').style.display = 'block';
+    // ✅ Show the modal & ensure scrolling works on mobile
+    const modal = document.getElementById('edit-recipe-modal');
+    modal.style.display = 'block';
+
+    setTimeout(() => {
+        modal.scrollTop = 0; // Scroll to top after opening
+    }, 10);
 }
 
-// Save edited recipe
+// ✅ Function to enable selecting & deselecting tags in Edit Recipe
+function setupEditTagSelection() {
+    document.querySelectorAll('#edit-tags-container .tag').forEach(tag => {
+        tag.removeEventListener('click', toggleEditTag); // Prevent duplicate event listeners
+        tag.addEventListener('click', toggleEditTag);
+    });
+
+    // ✅ Update selected tags display immediately when opening the modal
+    updateEditSelectedTags();
+}
+
+// ✅ Function to toggle tag selection
+function toggleEditTag() {
+    this.classList.toggle('selected'); // Toggle selection
+    updateEditSelectedTags(); // Update UI instantly
+}
+
+// ✅ Function to update the selected tags display in real-time
+function updateEditSelectedTags() {
+    const selectedTagsContainer = document.getElementById('edit-selected-tags');
+    selectedTagsContainer.innerHTML = ''; // Clear previous selection
+
+    document.querySelectorAll('#edit-tags-container .tag.selected').forEach(tag => {
+        addSelectedTag(tag.dataset.tag, selectedTagsContainer);
+    });
+}
+
+// ✅ Function to add a selected tag to the UI (used for both initial load & real-time updates)
+function addSelectedTag(tagText, container) {
+    const selectedTag = document.createElement('span');
+    selectedTag.className = 'selected-tag';
+    selectedTag.textContent = tagText;
+    selectedTag.dataset.tag = tagText;
+
+    // ✅ Allow deselection by clicking the selected tag (removes it from UI & selection)
+    selectedTag.addEventListener('click', function () {
+        this.remove(); // Remove from UI
+        document.querySelector(`#edit-tags-container .tag[data-tag="${tagText}"]`).classList.remove('selected');
+    });
+
+    container.appendChild(selectedTag);
+}
+
+// ✅ Save edited recipe
 document.getElementById('edit-recipe-form').addEventListener('submit', function (e) {
     e.preventDefault();
 
@@ -1110,6 +1360,9 @@ document.getElementById('edit-recipe-form').addEventListener('submit', function 
 
     const updatedRating = parseInt(document.getElementById('edit-recipe-rating').value, 10) || 0;
 
+    // ✅ Get selected tags before saving
+    const updatedTags = [...document.querySelectorAll('#edit-tags-container .tag.selected')].map(tag => tag.dataset.tag);
+
     const updatedRecipe = {
         ...recipes[recipeToEdit], // Retain existing properties
         name: document.getElementById('edit-recipe-name').value.trim(),
@@ -1117,6 +1370,7 @@ document.getElementById('edit-recipe-form').addEventListener('submit', function 
         glutenOption: document.getElementById('edit-gluten-option').value,
         mainCategory: document.getElementById('edit-main-category').value.trim(),
         subCategory: document.getElementById('edit-sub-category').value.trim(),
+        tags: updatedTags, // ✅ Save updated tags
         ingredients: updatedIngredients,
         instructions: updatedInstructions,
         rating: isNaN(updatedRating) ? 0 : updatedRating,
@@ -1234,41 +1488,79 @@ function addRecipeFromCSV(data) {
     recipes.push(newRecipe);
 }
 
+// ✅ Global function to handle tag selection in Edit Recipe modal
+function setupTagSelection() {
+    document.querySelectorAll('#edit-tags-container .tag').forEach(tag => {
+        tag.addEventListener('click', function () {
+            this.classList.toggle('selected'); // ✅ Toggle selection
+            updateSelectedTagsDisplay();
+        });
+    });
+}
+
+// ✅ Function to update the displayed selected tags in real-time
+function updateSelectedTagsDisplay() {
+    const selectedTagsContainer = document.getElementById('edit-selected-tags');
+    selectedTagsContainer.innerHTML = ''; // Clear previous selection
+
+    document.querySelectorAll('#edit-tags-container .tag.selected').forEach(tag => {
+        const selectedTag = document.createElement('span');
+        selectedTag.className = 'selected-tag';
+        selectedTag.textContent = tag.dataset.tag;
+        selectedTag.dataset.tag = tag.dataset.tag;
+
+        // ✅ Add click event to allow deselecting from the "Selected Tags" UI
+        selectedTag.addEventListener('click', function () {
+            selectedTag.remove(); // Remove from UI
+            document.querySelector(`#edit-tags-container .tag[data-tag="${tag.dataset.tag}"]`).classList.remove('selected'); // ✅ Unselect tag
+        });
+
+        selectedTagsContainer.appendChild(selectedTag);
+    });
+}
+
+// ✅ Ensure tag selection works in Edit Recipe modal
+setupTagSelection();
+
+
+// ✅ Ensure this runs when the page loads
+document.addEventListener("DOMContentLoaded", setupTagSelection);
+
+
+// ✅ Initialize tag selection inside DOMContentLoaded
+document.addEventListener('DOMContentLoaded', function () {
+    setupTagSelection('add-tags-container', 'selected-tags');
+    setupTagSelection('edit-tags-container', 'edit-selected-tags');
+});
+
+
+
 // Function to save changes to the current week
 function saveCurrentWeek() {
-    if (!accounts[currentAccount].savedWeeks) {
-        accounts[currentAccount].savedWeeks = [];
-    }
+    if (!auth.currentUser) return;
 
+    const userId = auth.currentUser.uid;
     const weekName = document.getElementById('week-name').value.trim();
+
     if (!weekName) {
         alert('Please provide a name for the week.');
         return;
     }
 
-    const mealPlan = accounts[currentAccount].mealPlan || {};
-    const isMealPlanEmpty = Object.values(mealPlan).every(day =>
-        Object.values(day).every(meal => meal === null)
-    );
-
-    if (isMealPlanEmpty) {
-        alert('Cannot save an empty week. Add recipes to the planner.');
-        return;
+    if (!accounts[currentAccount].savedWeeks) {
+        accounts[currentAccount].savedWeeks = [];
     }
 
-    console.log('Saving current week:', weekName); // Debugging log
-    console.log('Current meal plan before saving:', mealPlan); // Debugging log
+    const mealPlan = JSON.parse(JSON.stringify(accounts[currentAccount].mealPlan));
+    accounts[currentAccount].savedWeeks.push({ name: weekName, mealPlan });
 
-    const week = {
-        name: weekName,
-        mealPlan: JSON.parse(JSON.stringify(mealPlan)), // Deep copy
-    };
+    saveCurrentWeek(); // 🔥 **Add this here**
 
-    accounts[currentAccount].savedWeeks.push(week);
+    db.collection("users").doc(userId).update({ savedWeeks: accounts[currentAccount].savedWeeks })
+        .then(() => console.log(`✅ Week "${weekName}" saved to Firestore`))
+        .catch(error => console.error("❌ Error saving week:", error));
+
     saveAccountData();
-
-    console.log('Saved weeks after saving:', accounts[currentAccount].savedWeeks); // Debugging log
-
     displaySavedWeeks();
 }
 
@@ -1299,12 +1591,16 @@ function deleteSavedWeek(index) {
     }
 
     if (confirm(`Are you sure you want to delete ${savedWeeks[index].name}?`)) {
-        savedWeeks.splice(index, 1); // Remove the week from the array
-        saveAccountData(); // Save the updated accounts to localStorage
-        displaySavedWeeks(); // Refresh the list
+        savedWeeks.splice(index, 1);
+        
+        saveCurrentWeek(); // 🔥 **Add this here**
+        
+        saveAccountData();
+        displaySavedWeeks();
         alert("Week deleted successfully!");
     }
 }
+
 
 
 
@@ -1345,23 +1641,8 @@ function loadSavedWeek(index) {
 
 
 // Add event listener for the save button
-document.getElementById("save-week").addEventListener("click", saveCurrentWeek);
+document.getElementById("save-week").addEventListener("click", saveMealPlan);
 
-
-function randomizeWeeklyRecipes() {
-    if (recipes.length < 3) {
-        alert('Not enough recipes to randomize. Add more recipes to the list.');
-        return;
-    }
-
-    // Shuffle the recipes array and pick the first 3 recipes
-    const shuffledRecipes = recipes.slice().sort(() => Math.random() - 0.5);
-    weeklyRecipes = shuffledRecipes.slice(0, 3);
-
-    saveWeeklyRecipes(); // Save the randomized list to localStorage
-    displayWeeklyRecipes(); // Update the UI
-    displayShoppingList(); // Update the shopping list
-}
 
 // Save button event listener
 document.getElementById("save-week").addEventListener("click", saveCurrentWeek);
@@ -1376,6 +1657,8 @@ document.getElementById('clear-weekly-list').addEventListener('click', function 
                 accounts[currentAccount].mealPlan[day][meal] = null; // Set all meals to null
             });
         });
+
+        saveMealPlan(); // 🔥 **Add this here**
 
         saveAccountData(); // Save the cleared mealPlan to localStorage
         loadMealPlan(); // Refresh the UI
@@ -1491,6 +1774,60 @@ document.addEventListener("DOMContentLoaded", function () {
     updateButtons();
     window.scrollMealPlan = scrollMealPlan;
 });
+
+// Global variable to store selected recipe index
+let selectedRecipeIndex = null;
+
+// Function to open the meal plan selection modal
+function openMealPlanModal(recipeIndex) {
+    selectedRecipeIndex = recipeIndex; // Store the selected recipe index
+    document.getElementById('meal-plan-modal').style.display = 'block';
+}
+
+// Function to close the modal
+function closeMealPlanModal() {
+    document.getElementById('meal-plan-modal').style.display = 'none';
+    selectedRecipeIndex = null; // Reset selected recipe
+}
+
+// Function to confirm selection and save to meal plan
+function confirmMealPlanSelection() {
+    if (selectedRecipeIndex === null) return;
+
+    const day = document.getElementById('select-day').value;
+    const meal = document.getElementById('select-meal').value;
+    const recipe = recipes[selectedRecipeIndex];
+
+    if (day && meal && recipe) {
+        saveToMealPlan(day, meal, recipe);
+        closeMealPlanModal(); // Close modal after adding
+
+        // 🔄 Ensure meal plan updates immediately
+        updateMealPlannerUI();
+
+        // 🔄 Update shopping list
+        displayShoppingList();
+    }
+}
+
+
+function updateMealPlannerUI() {
+    Object.keys(accounts[currentAccount].mealPlan).forEach(day => {
+        Object.keys(accounts[currentAccount].mealPlan[day]).forEach(meal => {
+            const slot = document.querySelector(`.meal-slot[data-day="${day}"][data-meal="${meal}"] .meal-content`);
+            if (slot) {
+                const recipe = accounts[currentAccount].mealPlan[day][meal];
+                slot.innerHTML = recipe 
+                    ? `<div class="meal-item">
+                        <h4>${recipe.name}</h4>
+                        <button onclick="removeFromMealPlan('${day}', '${meal}')">Remove</button>
+                    </div>` 
+                    : ''; // If no recipe, clear content
+            }
+        });
+    });
+}
+
 
 
 
