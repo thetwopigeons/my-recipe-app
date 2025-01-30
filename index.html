@@ -5,14 +5,42 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Recipe Manager</title>
     <link rel="stylesheet" href="styles.css">
+    <!-- Firebase SDK -->
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+        import { getFirestore } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+        import { getAuth } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
+    
+        const firebaseConfig = {
+            apiKey: "AIzaSyAFIcmg7ImIqZqwPfnsT1VwgpcsZxazGZA",
+            authDomain: "meal-planner-ade82.firebaseapp.com",
+            projectId: "meal-planner-ade82",
+            storageBucket: "meal-planner-ade82.appspot.com",
+            messagingSenderId: "857392137454",
+            appId: "1:857392137454:web:ba25dc15fa4625c9165fff",
+            measurementId: "G-VM2FFLV3KD"
+        };
+    
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+    </script>
+    
 </head>
 <body>
     <header>
         <h1>Meal Planner</h1>
-        <div id="account-section">
-            Logged in as: <span id="current-account">default</span>
-            <button id="switch-account-button">Switch Account</button>
-        </div>
+
+        <section id="auth-section">
+            <h2>User Authentication</h2>
+            <input type="email" id="email" placeholder="Email">
+            <input type="password" id="password" placeholder="Password">
+            <button onclick="signUp()">Sign Up</button>
+            <button onclick="login()">Login</button>
+            <button onclick="logout()">Logout</button>
+        </section>
+        
     </header>
     <main>
         <!-- Button to Show/Hide Add New Recipe Section -->
@@ -81,6 +109,7 @@
                 <option value="Beef">Beef</option>
                 <option value="Vegetarian">Vegetarian</option>
                 <option value="Meat Alternative">Meat Alternative</option>
+                <option value="Fish">Fish</option> <!-- ✅ NEW: Added Fish -->
             </select>
 
             <!-- Tags Section in Add Recipe Form -->
@@ -90,9 +119,12 @@
     <span class="tag" data-tag="Easy">Easy</span>
     <span class="tag" data-tag="Vegetarian">Vegetarian</span>
     <span class="tag" data-tag="Healthy">Healthy</span>
-    <span class="tag" data-tag="Family Friendly">Family Friendly</span>
+    <span class="tag" data-tag="Family Friendly">Family Friendly</span> 
+    <span class="tag" data-tag="Freezer Food">Freezer Food</span>
+    <span class="tag" data-tag="Baby-Friendly">Baby-Friendly</span>
 </div>
 <div id="selected-tags" class="selected-tags"></div>
+
 
             <!-- Ingredients -->
             <h3>Ingredients</h3>
@@ -122,10 +154,12 @@
 
 <section id="search-recipes">
     <h2>Search Recipes</h2>
-    <input type="text" id="recipe-search" placeholder="Search for recipes by name" />
+    <input type="text" id="recipe-search" placeholder="Search for recipes" />
 </section>
 
-<section id="filter-recipes">
+<input type="text" id="tag-filter" placeholder="Search for recipes by tag">
+
+ <!--<section id="filter-recipes">
     <h2>Filter Recipes</h2>
     <div class="filter-group">
         <div class="filter">
@@ -158,7 +192,7 @@
                 <label><input type="checkbox" value="Vegetarian"> Vegetarian</label>
             </div>
         </div>
-        <div class="filter">
+       <div class="filter">
             <button class="filter-button" data-dropdown="rating-filter">Rating</button>
             <div id="rating-filter" class="filter-dropdown" style="display: none;">
                 <label><input type="radio" name="rating" value="1"> 1 Star & Up</label>
@@ -167,7 +201,7 @@
                 <label><input type="radio" name="rating" value="4"> 4 Stars & Up</label>
                 <label><input type="radio" name="rating" value="5"> 5 Stars</label>
             </div>
-        </div>
+        </div>-->
     </div>
     <button id="apply-filters">Filter</button>
 </section>
@@ -341,11 +375,13 @@
             <h2>Save Week</h2>
             <label for="week-name">Week Name:</label>
             <input type="text" id="week-name" placeholder="Enter a name for this week" style="margin-bottom: 10px;">
-            <button id="save-week" style="margin-top: 10px;">Save Week</button>
+            <button id="save-week" onclick="saveCurrentWeek()" style="margin-top: 10px;">Save Week</button>
         </section>
         
-        <h2>Saved Weeks</h2>
-        <div id="weeks-list"></div>
+        <section id="saved-weeks-section">
+            <h2>Saved Weeks</h2>
+            <div id="weeks-list"></div>
+        </section>
     
         <h3>Shopping List</h3>
         <div class="shopping-list-container">
@@ -357,7 +393,8 @@
     </section>
 
         <!-- Edit Recipe Modal -->
-        <div id="edit-recipe-modal" style="display: none; position: fixed; top: 20%; left: 50%; transform: translate(-50%, -20%); background: white; border: 1px solid #ccc; padding: 20px; z-index: 1000; width: 50%;">
+        <div id="edit-recipe-modal" class="modal" style="display: none;">
+            <div class="modal-content">
             <h2>Edit Recipe</h2>
             <form id="edit-recipe-form">
                 <!-- Recipe Name -->
@@ -396,6 +433,7 @@
                     <option value="Beef">Beef</option>
                     <option value="Vegetarian">Vegetarian</option>
                     <option value="Meat Alternative">Meat Alternative</option>
+                    <option value="Fish">Fish</option> <!-- ✅ NEW: Added Fish -->
                 </select>
 
                 <!-- Tags Section in Edit Recipe Form -->
@@ -406,6 +444,8 @@
     <span class="tag" data-tag="Vegetarian">Vegetarian</span>
     <span class="tag" data-tag="Healthy">Healthy</span>
     <span class="tag" data-tag="Family Friendly">Family Friendly</span>
+    <span class="tag" data-tag="Freezer Food">Freezer Food</span>
+    <span class="tag" data-tag="Baby-Friendly">Baby-Friendly</span>
 </div>
 <div id="edit-selected-tags" class="selected-tags"></div>
 
@@ -443,6 +483,37 @@
 
         <!-- Randomize Recipes Button -->
         <!--<button id="randomize-button">Randomize Weekly Recipes</button> -->
+
+        <!-- Add to Meal Plan Modal -->
+        <div id="meal-plan-modal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <button class="close" onclick="closeMealPlanModal()">&times;</button>
+                <h2>Select Day & Meal Slot</h2>
+        
+                <!-- Dropdowns for selecting day and meal slot -->
+                <label for="select-day">Day:</label>
+                <select id="select-day">
+                    <option value="monday">Monday</option>
+                    <option value="tuesday">Tuesday</option>
+                    <option value="wednesday">Wednesday</option>
+                    <option value="thursday">Thursday</option>
+                    <option value="friday">Friday</option>
+                    <option value="saturday">Saturday</option>
+                    <option value="sunday">Sunday</option>
+                </select>
+        
+                <label for="select-meal">Meal Slot:</label>
+                <select id="select-meal">
+                    <option value="breakfast">Breakfast</option>
+                    <option value="lunch">Lunch</option>
+                    <option value="dinner">Dinner</option>
+                </select>
+        
+                <!-- Confirm button -->
+                <button onclick="confirmMealPlanSelection()">Add to Meal Plan</button>
+            </div>
+        </div>
+
 
         <!-- Clear All Recipes Button -->
         <button id="clear-recipes-button" style="background-color: red; color: white; margin-top: 1rem;">Clear All Recipes</button>
