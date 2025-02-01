@@ -120,7 +120,7 @@ function displaySearchResults(matchingRecipes, isTextSearch) {
         ${recipe.tags && recipe.tags.length ? `<p class="tags">Tags: ${recipe.tags.join(', ')}</p>` : ""}
         <div class="button-group">
             <button onclick="openMealPlanModal(${recipes.indexOf(recipe)})" class="add">Add</button>
-            <button onclick="editRecipe(${recipes.indexOf(recipe)})" class="edit">Edit</button>
+            <button onclick="editRecipe(${recipes.indexOf(recipe)}, event)" class="edit">Edit</button>
             <button onclick="deleteRecipe(${recipes.indexOf(recipe)})" class="delete">Delete</button>
             <button onclick="copyRecipe(${recipes.indexOf(recipe)})" class="copy">Copy</button>
         </div>
@@ -758,7 +758,7 @@ function displayRecipes() {
             
             <div class="button-group">
                 <button onclick="openMealPlanModal(${recipes.indexOf(recipe)})" class="add">Add</button>
-                <button onclick="editRecipe(${recipes.indexOf(recipe)})" class="edit">Edit</button>
+                <button onclick="editRecipe(${recipes.indexOf(recipe)}, event)" class="edit">Edit</button>
                 <button onclick="deleteRecipe(${recipes.indexOf(recipe)})" class="delete">Delete</button>
                 <button onclick="copyRecipe(${recipes.indexOf(recipe)})" class="copy">Copy</button>
             </div>
@@ -1145,6 +1145,12 @@ function cleanIngredientName(itemText) {
 
 // Edit recipe
 function editRecipe(index) {
+    event.stopPropagation(); // Prevents event bubbling issues
+
+    // 🔄 Ensure meal plan selection index is cleared before editing
+    selectedRecipeIndex = null; 
+    console.log("🔄 Reset selectedRecipeIndex before editing recipe");
+
     recipeToEdit = index;
     const recipe = recipes[index];
 
@@ -1690,19 +1696,34 @@ document.addEventListener("DOMContentLoaded", function () {
 let selectedRecipeIndex = null;
 
 // Function to open the meal plan selection modal
-function openMealPlanModal(recipeIndex) {
-    selectedRecipeIndex = recipeIndex; // Store the selected recipe index
+function openMealPlanModal(index) {
+    console.log("➡️ Opening Meal Plan Modal for:", recipes[index]?.name);
+
+    // 🔄 Ensure the editing index is reset
+    recipeToEdit = null; 
+    console.log("🔄 Reset recipeToEdit to prevent modal conflicts");
+
+    // 🔄 Reset meal plan selection index before setting a new one
+    selectedRecipeIndex = null;
+    selectedRecipeIndex = index;
+
     document.getElementById('meal-plan-modal').style.display = 'block';
 }
 
+
 // Function to close the modal
 function closeMealPlanModal() {
+    console.log("❌ Closing Meal Plan Modal");
     document.getElementById('meal-plan-modal').style.display = 'none';
-    selectedRecipeIndex = null; // Reset selected recipe
+
+    // 🔄 Reset selectedRecipeIndex when modal closes
+    selectedRecipeIndex = null;
+    console.log("🔄 Reset selectedRecipeIndex to null on modal close");
 }
 
 // Function to confirm selection and save to meal plan
 function confirmMealPlanSelection() {
+    console.log("✅ Confirming Meal Plan Selection. selectedRecipeIndex:", selectedRecipeIndex);
     if (selectedRecipeIndex === null) return;
 
     const day = document.getElementById('select-day').value;
@@ -1711,15 +1732,17 @@ function confirmMealPlanSelection() {
 
     if (day && meal && recipe) {
         saveToMealPlan(day, meal, recipe);
-        closeMealPlanModal(); // Close modal after adding
-
-        // 🔄 Ensure meal plan updates immediately
+        console.log("🛠 Recipe added to meal plan:", recipe.name);
+        closeMealPlanModal();
         updateMealPlannerUI();
-
-        // 🔄 Update shopping list
         displayShoppingList();
     }
+
+    // **🔴 Reset selectedRecipeIndex after successful selection**
+    selectedRecipeIndex = null;
+    console.log("🔄 Reset selectedRecipeIndex to null after adding meal");
 }
+
 
 
 function updateMealPlannerUI() {
