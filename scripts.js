@@ -918,30 +918,51 @@ function showRecipeDetails(index) {
     const detailsContainer = document.getElementById("recipe-details-content");
     const detailsSection = document.getElementById("recipe-details");
 
-    // Ensure the details container exists
-    if (!detailsContainer) {
-        console.error("Required element is missing: Ensure #recipe-details-content exists in your HTML.");
+    if (!detailsContainer || !detailsSection) {
+        console.error("Required elements missing: Ensure #recipe-details-content and #recipe-details exist in your HTML.");
         return;
     }
 
-    // Populate the details content
+    // ✅ Improved layout without duplicate step numbers
     detailsContainer.innerHTML = `
-        <h3>${recipe.name}</h3>
-        <p><strong>Cooking Time:</strong> ${recipe.time}</p>
-        <p><strong>Category:</strong> ${recipe.mainCategory} (${recipe.subCategory})</p>
-        <p><strong>Ingredients:</strong></p>
-        <ul>
-            ${recipe.ingredients.map(ing => `<li>${ing.quantity || ""} ${ing.unit || ""} ${ing.name}</li>`).join("")}
-        </ul>
-        <p><strong>Instructions:</strong></p>
-        <ol>
-            ${recipe.instructions.map((step, idx) => `<li>${step}</li>`).join("")}
-        </ol>
+        <div class="recipe-header">
+            <h2>${recipe.name}</h2>
+            <p class="recipe-meta">
+                <span>⏳ ${recipe.time}</span> | 
+                <span>📌 ${recipe.mainCategory} → ${recipe.subCategory}</span>
+            </p>
+        </div>
+
+        ${recipe.image ? `<img src="${recipe.image}" alt="${recipe.name}" class="recipe-image">` : ""}
+
+        <div class="recipe-section">
+            <h3>🛒 Ingredients</h3>
+            <ul class="recipe-list">
+                ${recipe.ingredients.map(ing => `
+                    <li><strong>${ing.quantity || ""} ${ing.unit || ""}</strong> ${ing.name}</li>
+                `).join("")}
+            </ul>
+        </div>
+
+        <div class="recipe-section">
+            <h3>📖 Instructions</h3>
+            <ol class="recipe-list instructions-list">
+                ${recipe.instructions.map(step => `
+                    <li>${step}</li>
+                `).join("<br>")}  <!-- ✅ No duplicate step numbers now! -->
+            </ol>
+        </div>
     `;
 
-    // Show the section
+    // ✅ Ensure the details section is visible
     detailsSection.style.display = "block";
+
+    // ✅ Scroll to the top of the recipe details smoothly
+    setTimeout(() => {
+        detailsSection.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 100);
 }
+
 
 // Close the details section when clicking "Close"
 function closeRecipeDetails() {
